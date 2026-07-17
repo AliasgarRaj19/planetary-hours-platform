@@ -1,0 +1,19 @@
+services:
+postgres:
+    image: postgres:16
+    container_name: planetary-hours-postgres
+    restart: always
+
+    environment:
+      POSTGRES_USER: planetary_user
+      POSTGRES_PASSWORD: planetary_password
+      POSTGRES_DB: planetary_hours_db
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+postgres_data:
