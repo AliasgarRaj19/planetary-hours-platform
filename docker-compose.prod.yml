@@ -1,0 +1,15 @@
+services:
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: planetary-hours-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

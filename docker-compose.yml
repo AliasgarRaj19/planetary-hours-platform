@@ -1,5 +1,7 @@
+# WARNING: Development database configuration only.
+# This file is not used for the frontend production deployment.
 services:
-postgres:
+  postgres:
     image: postgres:16
     container_name: planetary-hours-postgres
     restart: always
@@ -16,4 +18,4 @@ postgres:
       - postgres_data:/var/lib/postgresql/data
 
 volumes:
-postgres_data:
+  postgres_data:
