@@ -1,15 +1,24 @@
-import type { PlanetaryHour } from '../data/planetaryHours';
+import type { PlanetaryHourScheduleRow } from '../engine/planetaryHoursEngine';
+import { formatTimeInTimezone } from '../utils/timeFormatting';
 
 type PlanetaryHoursTableProps = {
-  hours: PlanetaryHour[];
+  hours: PlanetaryHourScheduleRow[];
+  title: string;
+  activeHourNumber: number | null;
+  timezone: string | null;
 };
 
-export function PlanetaryHoursTable({ hours }: PlanetaryHoursTableProps) {
+export function PlanetaryHoursTable({
+  hours,
+  title,
+  activeHourNumber,
+  timezone,
+}: PlanetaryHoursTableProps) {
   return (
     <section className="table-section">
       <div className="section-heading">
         <p className="eyebrow">Today</p>
-        <h2>Today's Planetary Hours</h2>
+        <h2>{title}</h2>
       </div>
       <div className="table-scroll">
         <table>
@@ -24,18 +33,27 @@ export function PlanetaryHoursTable({ hours }: PlanetaryHoursTableProps) {
             </tr>
           </thead>
           <tbody>
-            {hours.map((hour) => (
-              <tr key={hour.hour}>
-                <td>{hour.hour}</td>
-                <td>
-                  <span className="planet-name">{hour.planet}</span>
-                </td>
-                <td>{hour.startTime}</td>
-                <td>{hour.endTime}</td>
-                <td>Coming Soon</td>
-                <td>Coming Soon</td>
+            {hours.length > 0 ? (
+              hours.map((hour) => (
+                <tr
+                  className={hour.hour === activeHourNumber ? 'active-hour-row' : undefined}
+                  key={hour.hour}
+                >
+                  <td>{hour.hour}</td>
+                  <td>
+                    <span className="planet-name">{hour.planet}</span>
+                  </td>
+                  <td>{timezone ? formatTimeInTimezone(hour.startTime, timezone) : ''}</td>
+                  <td>{timezone ? formatTimeInTimezone(hour.endTime, timezone) : ''}</td>
+                  <td>Coming Soon</td>
+                  <td>Coming Soon</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6}>Select a location to load planetary hours.</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
