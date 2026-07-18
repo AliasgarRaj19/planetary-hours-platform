@@ -1,8 +1,8 @@
 services:
   web:
     build:
-      context: ./apps/web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/web/Dockerfile
     container_name: planetary-hours-web
     restart: unless-stopped
     ports:

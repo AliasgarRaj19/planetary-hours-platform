@@ -5,13 +5,11 @@ import { SummaryCards } from './components/SummaryCards';
 import { PlanetaryHoursTable } from './components/PlanetaryHoursTable';
 import { SolarSystemBackground } from './components/SolarSystemBackground';
 import {
-  generatePlanetaryHoursSchedule,
-  type PlanetaryHourScheduleRow,
-} from './engine/planetaryHoursEngine';
-import {
   buildPlanetaryHourSummary,
+  generatePlanetaryHoursSchedule,
   getVisiblePlanetaryHours,
-} from './engine/planetaryHourSelectors';
+  type PlanetaryHourScheduleRow,
+} from '@planetary-hours/planetary-engine';
 import {
   getBrowserPosition,
   reverseGeocodeCoordinates,

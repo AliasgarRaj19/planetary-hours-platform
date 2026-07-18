@@ -1,4 +1,4 @@
-import type { PlanetaryHourScheduleRow } from '../engine/planetaryHoursEngine';
+import type { PlanetaryHourScheduleRow } from '@planetary-hours/planetary-engine';
 import { formatTimeInTimezone } from '../utils/timeFormatting';
 
 type PlanetaryHoursTableProps = {

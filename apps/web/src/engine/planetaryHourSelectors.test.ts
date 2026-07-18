@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { generatePlanetaryHoursSchedule } from './planetaryHoursEngine';
+import { generatePlanetaryHoursSchedule } from '@planetary-hours/planetary-engine';
 import {
   calculateTimeRemaining,
   findCurrentPlanetaryHour,
   findNextPlanetaryHour,
   formatCountdown,
   getVisiblePlanetaryHours,
-} from './planetaryHourSelectors';
+} from '@planetary-hours/planetary-engine';
 
 function buildSchedules() {
   const yesterdaySchedule = generatePlanetaryHoursSchedule({

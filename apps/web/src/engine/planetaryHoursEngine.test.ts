@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generatePlanetaryHoursSchedule } from './planetaryHoursEngine';
+import { generatePlanetaryHoursSchedule } from '@planetary-hours/planetary-engine';
 
 const chaldeanOrder = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon'];
 

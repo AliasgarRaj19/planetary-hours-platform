@@ -1,5 +1,7 @@
-import type { PlanetaryHourScheduleRow } from '../engine/planetaryHoursEngine';
-import { formatCountdown } from '../engine/planetaryHourSelectors';
+import {
+  formatCountdown,
+  type PlanetaryHourScheduleRow,
+} from '@planetary-hours/planetary-engine';
 import { formatTimeInTimezone } from '../utils/timeFormatting';
 
 type SummaryCardsProps = {

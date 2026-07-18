@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SummaryCards } from './SummaryCards';
 import { PlanetaryHoursTable } from './PlanetaryHoursTable';
-import { generatePlanetaryHoursSchedule } from '../engine/planetaryHoursEngine';
+import { generatePlanetaryHoursSchedule } from '@planetary-hours/planetary-engine';
 
 describe('planetary hours UI integration', () => {
   const schedule = generatePlanetaryHoursSchedule({

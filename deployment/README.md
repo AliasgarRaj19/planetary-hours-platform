@@ -18,7 +18,7 @@ http://127.0.0.1:8080/health
 
 ```bash
 cd /opt/projects/planetary-hours-platform
-docker build -t planetary-hours-web:local ./apps/web
+docker build -t planetary-hours-web:local -f apps/web/Dockerfile .
 ```
 
 ## Docker Compose Validation
