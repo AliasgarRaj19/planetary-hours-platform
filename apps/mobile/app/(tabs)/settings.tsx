@@ -58,6 +58,11 @@ export default function SettingsScreen() {
             onPress={() => router.push('/settings/privacy-policy')}
             title="Privacy Policy"
           />
+          <SettingsMenuRow
+            accessibilityLabel="Open Disclaimer"
+            onPress={() => router.push('/settings/disclaimer')}
+            title="Disclaimer"
+          />
         </SettingsSection>
       </ScrollView>
     </SafeAreaView>
