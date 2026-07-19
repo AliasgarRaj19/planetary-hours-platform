@@ -8,10 +8,15 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "export:android": "expo export --platform android",
+    "eas-build-pre-install": "node -e \"require('node:fs').accessSync('../../packages/planetary-engine/src/index.ts')\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@planetary-hours/planetary-engine": "0.0.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",

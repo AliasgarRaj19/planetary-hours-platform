@@ -21,6 +21,7 @@ import {
   type PlanetaryHourScheduleRow,
   zonedDateTimeToUtcDate,
 } from '@planetary-hours/planetary-engine';
+import { readLocationPreference, saveLocationPreference } from './location-preferences';
 
 export type Coordinates = {
   latitude: number;
@@ -84,6 +85,16 @@ const LOCATION_TIMEOUT_MS = 20000;
 const CACHED_LOCATION_MAX_AGE_MS = 5 * 60 * 1000;
 const CACHED_LOCATION_REQUIRED_ACCURACY_METERS = 1000;
 const OPEN_METEO_SEARCH_URL = 'https://geocoding-api.open-meteo.com/v1/search';
+const GETTING_LOCATION_STATUS = 'Getting your location...';
+const LOCATION_PERMISSION_DENIED_MESSAGE =
+  'Location permission was not allowed. Approximate mode is active.';
+
+let didStartStartupLocationHydration = false;
+
+type DeviceLocationOptions = {
+  persistApproximateOnFailure?: boolean;
+  persistDeviceOnSuccess?: boolean;
+};
 
 export function PlanetaryProvider({ children }: PropsWithChildren) {
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
@@ -100,6 +111,8 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
   const didTryAutomaticLocation = useRef(false);
   const lastDiagnosticsKey = useRef('');
   const loadingRef = useRef(false);
+  const mountedRef = useRef(false);
+  const activeLocationRequestId = useRef(0);
 
   const currentDateKey = getDateKeyInTimezone(now, timezone);
   const currentDate = useMemo(() => dateFromLocalDateKey(currentDateKey), [currentDateKey]);
@@ -131,14 +144,23 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
     [completeSchedule, now],
   );
 
-  const selectDeviceLocation = useCallback(async (requestPermission = true) => {
+  const selectDeviceLocation = useCallback(async (
+    requestPermission = true,
+    options: DeviceLocationOptions = {},
+  ) => {
     if (loadingRef.current) {
       return;
     }
 
+    const requestId = activeLocationRequestId.current + 1;
+    activeLocationRequestId.current = requestId;
     loadingRef.current = true;
-    setIsLoadingLocation(true);
-    setErrorMessage('');
+    applyIfActive(mountedRef, activeLocationRequestId, requestId, () => {
+      setIsLoadingLocation(true);
+      setErrorMessage('');
+      setLocationMode('device');
+      setLocationStatus(GETTING_LOCATION_STATUS);
+    });
 
     try {
       const servicesEnabled = await Location.hasServicesEnabledAsync();
@@ -150,8 +172,13 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
       const existingPermission = await Location.getForegroundPermissionsAsync();
 
       if (existingPermission.status !== Location.PermissionStatus.GRANTED && !requestPermission) {
-        setLocationMode('approximate');
-        setLocationStatus('Approximate mode');
+        applyIfActive(mountedRef, activeLocationRequestId, requestId, () => {
+          setCoordinates(null);
+          setLocationDisplayName('Approximate location');
+          setLocationMode('approximate');
+          setLocationStatus('Approximate mode');
+          setErrorMessage(LOCATION_PERMISSION_DENIED_MESSAGE);
+        });
         return;
       }
 
@@ -161,21 +188,27 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
           : await Location.requestForegroundPermissionsAsync();
 
       if (permission.status !== Location.PermissionStatus.GRANTED) {
-        throw new Error('Location permission was denied. Approximate mode is active.');
+        throw new Error(LOCATION_PERMISSION_DENIED_MESSAGE);
       }
 
       const locatedPosition = await getDevicePosition();
 
-      setCoordinates(locatedPosition.coordinates);
-      setLocationDisplayName('Device location');
-      setLocationMode('device');
-      setLocationStatus(
-        locatedPosition.source === 'cached'
-          ? 'Using recent device location'
-          : 'Using current location',
-      );
-      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
-      setIsLocationSelectorOpen(false);
+      if (options.persistDeviceOnSuccess !== false) {
+        void saveLocationPreference({ mode: 'device' });
+      }
+
+      applyIfActive(mountedRef, activeLocationRequestId, requestId, () => {
+        setCoordinates(locatedPosition.coordinates);
+        setLocationDisplayName('Device location');
+        setLocationMode('device');
+        setLocationStatus(
+          locatedPosition.source === 'cached'
+            ? 'Using recent device location'
+            : 'Using current location',
+        );
+        setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+        setIsLocationSelectorOpen(false);
+      });
       logDiagnosticsOnce({
         coordinates: locatedPosition.coordinates,
         keyPrefix: locatedPosition.source,
@@ -184,16 +217,24 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
       });
     } catch (error) {
-      setCoordinates(null);
-      setLocationDisplayName('Approximate location');
-      setLocationMode('approximate');
-      setLocationStatus('Approximate mode');
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Unable to retrieve device location.',
-      );
+      if (options.persistApproximateOnFailure) {
+        void saveLocationPreference({ mode: 'approximate' });
+      }
+
+      applyIfActive(mountedRef, activeLocationRequestId, requestId, () => {
+        setCoordinates(null);
+        setLocationDisplayName('Approximate location');
+        setLocationMode('approximate');
+        setLocationStatus('Approximate mode');
+        setErrorMessage(
+          error instanceof Error ? error.message : 'Unable to retrieve device location.',
+        );
+      });
     } finally {
       loadingRef.current = false;
-      setIsLoadingLocation(false);
+      applyIfActive(mountedRef, activeLocationRequestId, requestId, () => {
+        setIsLoadingLocation(false);
+      });
     }
   }, []);
 
@@ -250,6 +291,25 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
     setLocationStatus('Using selected location');
     setTimezone(city.timezone);
     setIsLocationSelectorOpen(false);
+    void saveLocationPreference({
+      location: {
+        displayName: city.displayName,
+        id: city.id,
+        latitude: city.latitude,
+        longitude: city.longitude,
+        timezone: city.timezone,
+      },
+      mode: 'manual',
+    });
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+      activeLocationRequestId.current += 1;
+    };
   }, []);
 
   useEffect(() => {
@@ -273,7 +333,36 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
     }
 
     didTryAutomaticLocation.current = true;
-    void selectDeviceLocation(false);
+    const timerId = setTimeout(() => {
+      if (didStartStartupLocationHydration) {
+        return;
+      }
+
+      didStartStartupLocationHydration = true;
+      void hydrateLocationPreference({
+        applyManualLocation: (city) => {
+          setCoordinates({
+            latitude: city.latitude,
+            longitude: city.longitude,
+          });
+          setErrorMessage('');
+          setLocationDisplayName(city.displayName);
+          setLocationMode('manual');
+          setLocationStatus('Using selected location');
+          setTimezone(city.timezone);
+        },
+        applyApproximateLocation: () => {
+          setCoordinates(null);
+          setLocationDisplayName('Approximate location');
+          setLocationMode('approximate');
+          setLocationStatus('Approximate mode');
+        },
+        mountedRef,
+        selectDeviceLocation,
+      });
+    }, 0);
+
+    return () => clearTimeout(timerId);
   }, [selectDeviceLocation]);
 
   const value = useMemo<PlanetaryState>(
@@ -331,6 +420,55 @@ export function usePlanetary() {
   }
 
   return value;
+}
+
+function applyIfActive(
+  mountedRef: { current: boolean },
+  activeRequestId: { current: number },
+  requestId: number,
+  update: () => void,
+) {
+  if (mountedRef.current && activeRequestId.current === requestId) {
+    update();
+  }
+}
+
+async function hydrateLocationPreference(input: {
+  applyApproximateLocation: () => void;
+  applyManualLocation: (city: CitySearchResult) => void;
+  mountedRef: { current: boolean };
+  selectDeviceLocation: (
+    requestPermission?: boolean,
+    options?: DeviceLocationOptions,
+  ) => Promise<void>;
+}) {
+  const preference = await readLocationPreference();
+
+  if (!input.mountedRef.current) {
+    return;
+  }
+
+  if (!preference) {
+    await input.selectDeviceLocation(true, {
+      persistApproximateOnFailure: true,
+      persistDeviceOnSuccess: true,
+    });
+    return;
+  }
+
+  if (preference.mode === 'device') {
+    await input.selectDeviceLocation(false, {
+      persistDeviceOnSuccess: true,
+    });
+    return;
+  }
+
+  if (preference.mode === 'manual') {
+    input.applyManualLocation(preference.location);
+    return;
+  }
+
+  input.applyApproximateLocation();
 }
 
 async function getDevicePosition(): Promise<LocatedPosition> {
