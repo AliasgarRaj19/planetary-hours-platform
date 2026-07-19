@@ -36,6 +36,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-updates",
       [
         "expo-splash-screen",
         {
@@ -53,8 +54,15 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
+    "updates": {
+      "url": "https://u.expo.dev/dea253ca-e3c4-43b6-9e0f-f1a6694b2ea0"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
       "router": {},
+      "nativeUpdateManifestUrl": "",
       "eas": {
         "projectId": "dea253ca-e3c4-43b6-9e0f-f1a6694b2ea0"
       }
