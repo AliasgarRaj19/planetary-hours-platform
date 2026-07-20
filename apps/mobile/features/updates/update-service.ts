@@ -1,9 +1,9 @@
 import {
-  fetchNativeUpdateManifest,
-  getAndroidNativeUpdate,
-  type NativeUpdateAvailable,
-  type NativeUpdateManifest,
-} from './native-update-manifest';
+  fetchAndroidUpdateManifest,
+  getAndroidUpdate,
+  type AndroidUpdateAvailable,
+  type AndroidUpdateManifest,
+} from '../../src/services/updateService';
 
 export type EasUpdateCheckResult =
   | { available: false }
@@ -11,7 +11,7 @@ export type EasUpdateCheckResult =
 
 export type HybridUpdateResult =
   | { kind: 'none' }
-  | { kind: 'native'; update: NativeUpdateAvailable }
+  | { kind: 'native'; update: AndroidUpdateAvailable }
   | { kind: 'eas' };
 
 export type StartupUpdateCoordinator = {
@@ -35,19 +35,19 @@ export async function downloadCompatibleEasUpdate(input: {
 export async function checkHybridUpdate(input: {
   canCheckEasUpdates: boolean;
   checkEasUpdate: () => Promise<EasUpdateCheckResult>;
-  fetchNativeManifest?: (url: string) => Promise<NativeUpdateManifest | null>;
+  fetchNativeManifest?: (url: string) => Promise<AndroidUpdateManifest>;
   installedVersionCode: number;
   nativeManifestUrl: string | null;
 }): Promise<HybridUpdateResult> {
   if (input.nativeManifestUrl) {
     const fetchManifest =
       input.fetchNativeManifest ??
-      ((url: string) => fetchNativeUpdateManifest({ url }));
+      ((url: string) => fetchAndroidUpdateManifest({ url }));
     const manifest = await fetchManifest(input.nativeManifestUrl);
 
     if (manifest) {
-      const nativeUpdate = getAndroidNativeUpdate({
-        installedVersionCode: input.installedVersionCode,
+      const nativeUpdate = getAndroidUpdate({
+        installedBuild: input.installedVersionCode,
         manifest,
       });
 

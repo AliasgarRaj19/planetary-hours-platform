@@ -10,6 +10,7 @@ import { useUpdatesState } from '@/features/updates/update-state';
 
 export default function AppUpdatesScreen() {
   const updates = useUpdatesState();
+  const androidUpdate = updates.availableAndroidUpdate;
 
   return (
     <SafeAreaView style={settingsStyles.safeArea}>
@@ -24,11 +25,34 @@ export default function AppUpdatesScreen() {
           <SettingsValueRow label="Build number" value={updates.buildNumberLabel} />
           <SettingsValueRow label="Current update status" value={updates.currentStatus} />
           <SettingsValueRow label="Last checked" value={updates.lastCheckLabel} />
+          {androidUpdate ? (
+            <>
+              <SettingsValueRow label="Latest version" value={androidUpdate.version} />
+              <SettingsValueRow
+                label="Published"
+                value={formatPublishedDate(androidUpdate.publishedAt)}
+              />
+              <SettingsValueRow
+                label="Release notes"
+                value={
+                  androidUpdate.releaseNotes.length
+                    ? androidUpdate.releaseNotes.join('\n')
+                    : 'No release notes provided.'
+                }
+              />
+            </>
+          ) : null}
           <Pressable
-            accessibilityLabel="Check for app updates"
+            accessibilityLabel={
+              androidUpdate ? 'Download available Android update' : 'Check for app updates'
+            }
             accessibilityRole="button"
             disabled={updates.isChecking || updates.isDownloading}
-            onPress={updates.checkForUpdates}
+            onPress={
+              androidUpdate
+                ? updates.installAvailableAndroidUpdate
+                : updates.checkForUpdates
+            }
             style={[
               settingsStyles.primaryAction,
               (updates.isChecking || updates.isDownloading) && settingsStyles.primaryActionDisabled,
@@ -39,11 +63,26 @@ export default function AppUpdatesScreen() {
                 ? 'Downloading update...'
                 : updates.isChecking
                   ? 'Checking...'
-                  : 'Check for updates'}
+                  : androidUpdate
+                    ? 'Update Now'
+                    : 'Check for updates'}
             </Text>
           </Pressable>
         </SettingsSection>
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function formatPublishedDate(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
 }

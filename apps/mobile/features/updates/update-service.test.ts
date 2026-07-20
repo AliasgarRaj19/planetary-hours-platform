@@ -1,64 +1,77 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  getAndroidNativeUpdate,
-  isHttpsUrl,
-  parseNativeUpdateManifest,
-  type NativeUpdateManifest,
-} from './native-update-manifest';
-import { isDeferredUntilNextLocalDay } from './update-preferences';
+  fetchAndroidUpdateManifest,
+  getAndroidUpdate,
+  parseAndroidUpdateManifest,
+  type AndroidUpdateManifest,
+} from '../../src/services/updateService';
 import {
   checkHybridUpdate,
   createStartupUpdateCoordinator,
   downloadCompatibleEasUpdate,
 } from './update-service';
+import { isDeferredUntilNextLocalDay as isDeferredUntilNextLocalDayPreference } from './update-preferences';
 
-const manifest: NativeUpdateManifest = {
-  android: {
-    downloadUrl: 'https://example.com/downloads/planetary-hours-v1.0.1.apk',
-    latestVersion: '1.0.1',
-    latestVersionCode: 2,
-    mandatory: false,
-    minimumVersion: '1.0.0',
-    minimumVersionCode: 1,
-    publishedAt: '2026-07-19T00:00:00Z',
-    releaseNotes: ['Improved location startup', 'Added update checking'],
-  },
+const manifest: AndroidUpdateManifest = {
+  apkUrl: 'http://31.97.205.245/downloads/planetary-hours-v1.0.0-beta.apk',
+  build: 2,
+  publishedAt: '2026-07-20T00:00:00Z',
+  releaseNotes: ['Added self-hosted update checks', 'Improved beta downloads'],
+  required: false,
+  version: '1.0.0',
 };
 
-describe('native update manifest', () => {
-  it('detects no native update when the installed build is current', () => {
+describe('Android update manifest', () => {
+  it('parses the VPS manifest schema', () => {
+    expect(parseAndroidUpdateManifest(manifest)).toEqual(manifest);
+  });
+
+  it('rejects invalid manifest JSON shapes', () => {
+    expect(parseAndroidUpdateManifest({ build: '2' })).toBeNull();
+    expect(parseAndroidUpdateManifest({ ...manifest, releaseNotes: [1] })).toBeNull();
+    expect(parseAndroidUpdateManifest({ ...manifest, apkUrl: 'file:///app.apk' })).toBeNull();
+  });
+
+  it('detects a newer build numerically', () => {
+    const update = getAndroidUpdate({
+      installedBuild: 1,
+      manifest,
+    });
+
+    expect(update?.build).toBe(2);
+    expect(update?.installedBuild).toBe(1);
+  });
+
+  it('returns no update when the installed build is current', () => {
     expect(
-      getAndroidNativeUpdate({
-        installedVersionCode: 2,
+      getAndroidUpdate({
+        installedBuild: 2,
         manifest,
       }),
     ).toBeNull();
   });
 
-  it('detects a newer native versionCode numerically', () => {
-    const update = getAndroidNativeUpdate({
-      installedVersionCode: 1,
-      manifest,
-    });
+  it('fetches and parses update JSON once', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(manifest)));
 
-    expect(update?.latestVersionCode).toBe(2);
-    expect(update?.installedVersionCode).toBe(1);
+    await expect(fetchAndroidUpdateManifest({ fetchImpl })).resolves.toEqual(manifest);
+    expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
-  it('rejects malformed native manifests', () => {
-    expect(parseNativeUpdateManifest({ android: { latestVersionCode: '2' } })).toBeNull();
+  it('surfaces invalid JSON with a friendly message', async () => {
+    const fetchImpl = vi.fn(async () => new Response('{'));
+
+    await expect(fetchAndroidUpdateManifest({ fetchImpl })).rejects.toThrow(
+      'Update information is temporarily unavailable.',
+    );
   });
 
-  it('rejects insecure HTTP URLs', () => {
-    expect(isHttpsUrl('http://example.com/update.json')).toBe(false);
-    expect(
-      parseNativeUpdateManifest({
-        android: {
-          ...manifest.android,
-          downloadUrl: 'http://example.com/app.apk',
-        },
-      }),
-    ).toBeNull();
+  it('surfaces server errors with a friendly message', async () => {
+    const fetchImpl = vi.fn(async () => new Response('{}', { status: 503 }));
+
+    await expect(fetchAndroidUpdateManifest({ fetchImpl })).rejects.toThrow(
+      'Update server is unavailable. Please try again later.',
+    );
   });
 });
 
@@ -68,43 +81,39 @@ describe('hybrid update priority', () => {
       canCheckEasUpdates: true,
       checkEasUpdate: async () => ({ available: false }),
       fetchNativeManifest: async () => ({
-        android: {
-          ...manifest.android,
-          latestVersionCode: 1,
-        },
+        ...manifest,
+        build: 1,
       }),
       installedVersionCode: 1,
-      nativeManifestUrl: 'https://example.com/update.json',
+      nativeManifestUrl: 'http://31.97.205.245/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('none');
   });
 
-  it('returns compatible EAS updates when native build is current', async () => {
+  it('returns compatible EAS updates when the native build is current', async () => {
     const result = await checkHybridUpdate({
       canCheckEasUpdates: true,
       checkEasUpdate: async () => ({ available: true }),
       fetchNativeManifest: async () => ({
-        android: {
-          ...manifest.android,
-          latestVersionCode: 1,
-        },
+        ...manifest,
+        build: 1,
       }),
       installedVersionCode: 1,
-      nativeManifestUrl: 'https://example.com/update.json',
+      nativeManifestUrl: 'http://31.97.205.245/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('eas');
   });
 
-  it('does not check EAS updates when a newer native APK exists', async () => {
+  it('does not check EAS updates when a newer APK exists', async () => {
     const checkEasUpdate = vi.fn(async () => ({ available: true }) as const);
     const result = await checkHybridUpdate({
       canCheckEasUpdates: true,
       checkEasUpdate,
       fetchNativeManifest: async () => manifest,
       installedVersionCode: 1,
-      nativeManifestUrl: 'https://example.com/update.json',
+      nativeManifestUrl: 'http://31.97.205.245/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('native');
@@ -155,13 +164,13 @@ describe('update prompt preferences', () => {
     const deferredAt = new Date(2026, 6, 19, 9).toISOString();
 
     expect(
-      isDeferredUntilNextLocalDay({
+      isDeferredUntilNextLocalDayPreference({
         deferredAt,
         now: new Date(2026, 6, 19, 20),
       }),
     ).toBe(true);
     expect(
-      isDeferredUntilNextLocalDay({
+      isDeferredUntilNextLocalDayPreference({
         deferredAt,
         now: new Date(2026, 6, 20, 1),
       }),

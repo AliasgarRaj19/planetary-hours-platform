@@ -8,10 +8,15 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { Alert, Linking, Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
 import * as Updates from 'expo-updates';
+import {
+  ANDROID_UPDATE_MANIFEST_URL,
+  type AndroidUpdateAvailable,
+} from '../../src/services/updateService';
 import {
   readLastUpdateCheckTimestamp,
   readUpdateDeferralTimestamp,
@@ -30,9 +35,11 @@ type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'up-to-d
 
 type UpdateState = {
   appVersionLabel: string;
+  availableAndroidUpdate: AndroidUpdateAvailable | null;
   buildNumberLabel: string;
   checkForUpdates: () => Promise<void>;
   currentStatus: string;
+  installAvailableAndroidUpdate: () => Promise<void>;
   isChecking: boolean;
   isDownloading: boolean;
   lastCheckLabel: string;
@@ -68,6 +75,17 @@ export function UpdateProvider({ children }: PropsWithChildren) {
       setStatusMessage,
     });
   }, [installedVersionCode, nativeManifestUrl]);
+
+  const availableAndroidUpdate =
+    pendingUpdate?.kind === 'native' ? pendingUpdate.update : null;
+
+  const installAvailableAndroidUpdate = useCallback(async () => {
+    if (!availableAndroidUpdate) {
+      return;
+    }
+
+    await Linking.openURL(availableAndroidUpdate.apkUrl);
+  }, [availableAndroidUpdate]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -137,7 +155,11 @@ export function UpdateProvider({ children }: PropsWithChildren) {
 
     if (pendingUpdate.kind === 'native') {
       const notes = pendingUpdate.update.releaseNotes.slice(0, 3).join('\n');
-      const message = [`Version ${pendingUpdate.update.latestVersion} is available.`, notes]
+      const message = [
+        `Version ${pendingUpdate.update.version} is available.`,
+        `Published ${formatPublishedDate(pendingUpdate.update.publishedAt)}`,
+        notes,
+      ]
         .filter(Boolean)
         .join('\n\n');
 
@@ -154,7 +176,7 @@ export function UpdateProvider({ children }: PropsWithChildren) {
         },
         {
           onPress: () => {
-            void Linking.openURL(pendingUpdate.update.downloadUrl);
+            void Linking.openURL(pendingUpdate.update.apkUrl);
           },
           text: 'Update now',
         },
@@ -165,15 +187,27 @@ export function UpdateProvider({ children }: PropsWithChildren) {
   const value = useMemo<UpdateState>(
     () => ({
       appVersionLabel: `Version ${appVersion} (Build ${buildNumber})`,
+      availableAndroidUpdate,
       buildNumberLabel: buildNumber,
       checkForUpdates,
       currentStatus: statusMessage,
+      installAvailableAndroidUpdate,
       isChecking: status === 'checking',
       isDownloading: status === 'downloading',
       lastCheckLabel: formatLastCheckLabel(lastCheckAt),
       nativeManifestUrlLabel: nativeManifestUrl || 'Not configured',
     }),
-    [appVersion, buildNumber, checkForUpdates, lastCheckAt, nativeManifestUrl, status, statusMessage],
+    [
+      appVersion,
+      availableAndroidUpdate,
+      buildNumber,
+      checkForUpdates,
+      installAvailableAndroidUpdate,
+      lastCheckAt,
+      nativeManifestUrl,
+      status,
+      statusMessage,
+    ],
   );
 
   return <UpdateContext.Provider value={value}>{children}</UpdateContext.Provider>;
@@ -247,7 +281,7 @@ async function runUpdateCheck(input: UpdateCheckInput) {
 
       if (result.kind === 'native') {
         input.setStatus('available');
-        input.setStatusMessage(`New app version ${result.update.latestVersion} available`);
+        input.setStatusMessage('Update Available');
         return;
       }
 
@@ -342,7 +376,7 @@ function getNativeManifestUrl() {
   }
 
   const url = Constants.expoConfig?.extra?.nativeUpdateManifestUrl;
-  return typeof url === 'string' && url.trim() ? url.trim() : null;
+  return typeof url === 'string' && url.trim() ? url.trim() : ANDROID_UPDATE_MANIFEST_URL;
 }
 
 function formatLastCheckLabel(value: string | null) {
@@ -354,6 +388,19 @@ function formatLastCheckLabel(value: string | null) {
 
   if (Number.isNaN(date.getTime())) {
     return 'Never';
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function formatPublishedDate(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
   }
 
   return new Intl.DateTimeFormat('en', {
