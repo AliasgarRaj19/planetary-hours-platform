@@ -18,11 +18,15 @@ import {
   type AndroidUpdateAvailable,
 } from '../../src/services/updateService';
 import {
+  clearIgnoredNativeUpdateBuild,
+  readIgnoredNativeUpdateBuild,
   readLastUpdateCheckTimestamp,
   readUpdateDeferralTimestamp,
+  saveIgnoredNativeUpdateBuild,
   saveLastUpdateCheckTimestamp,
   saveUpdateDeferralTimestamp,
   isDeferredUntilNextLocalDay,
+  shouldSuppressIgnoredNativeUpdate,
 } from './update-preferences';
 import {
   checkHybridUpdate,
@@ -84,7 +88,7 @@ export function UpdateProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    await Linking.openURL(availableAndroidUpdate.apkUrl);
+    await openAndroidUpdateUrl(availableAndroidUpdate.apkUrl);
   }, [availableAndroidUpdate]);
 
   useEffect(() => {
@@ -102,24 +106,20 @@ export function UpdateProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (__DEV__ || !startupUpdateCoordinator.shouldStart()) {
+    if (!startupUpdateCoordinator.shouldStart()) {
       return;
     }
 
-    const timerId = setTimeout(() => {
-      void runStartupUpdateCheck({
-        activeCheckId,
-        installedVersionCode,
-        mountedRef,
-        nativeManifestUrl,
-        setLastCheckAt,
-        setPendingUpdate,
-        setStatus,
-        setStatusMessage,
-      });
-    }, 0);
-
-    return () => clearTimeout(timerId);
+    void runStartupUpdateCheck({
+      activeCheckId,
+      installedVersionCode,
+      mountedRef,
+      nativeManifestUrl,
+      setLastCheckAt,
+      setPendingUpdate,
+      setStatus,
+      setStatusMessage,
+    });
   }, [installedVersionCode, nativeManifestUrl]);
 
   useEffect(() => {
@@ -166,7 +166,8 @@ export function UpdateProvider({ children }: PropsWithChildren) {
       Alert.alert('New app version available', message, [
         {
           onPress: () => {
-            void deferUpdatePrompt({
+            void ignoreNativeUpdateBuild({
+              build: pendingUpdate.update.build,
               mountedRef,
               setStatus,
               setStatusMessage,
@@ -176,7 +177,7 @@ export function UpdateProvider({ children }: PropsWithChildren) {
         },
         {
           onPress: () => {
-            void Linking.openURL(pendingUpdate.update.apkUrl);
+            void openAndroidUpdateUrl(pendingUpdate.update.apkUrl);
           },
           text: 'Update now',
         },
@@ -224,16 +225,6 @@ export function useUpdatesState() {
 }
 
 async function runStartupUpdateCheck(input: UpdateCheckInput) {
-  const deferredAt = await readUpdateDeferralTimestamp();
-
-  if (isDeferredUntilNextLocalDay({ deferredAt, now: new Date() })) {
-    applyIfMounted(input.mountedRef, () => {
-      input.setStatus('deferred');
-      input.setStatusMessage('Update prompt deferred until tomorrow');
-    });
-    return;
-  }
-
   await runUpdateCheck({
     ...input,
     manual: false,
@@ -266,6 +257,10 @@ async function runUpdateCheck(input: UpdateCheckInput) {
   applyIfCurrent(input, checkId, () => input.setLastCheckAt(checkedAt));
 
   try {
+    const ignoredNativeBuild = input.manual ? null : await getActiveIgnoredNativeBuild(
+      input.installedVersionCode,
+    );
+    const deferredAt = input.manual ? null : await readUpdateDeferralTimestamp();
     const result = await checkHybridUpdate({
       canCheckEasUpdates: canUseEasUpdates(),
       checkEasUpdate: async () => {
@@ -277,6 +272,32 @@ async function runUpdateCheck(input: UpdateCheckInput) {
     });
 
     applyIfCurrent(input, checkId, () => {
+      if (
+        !input.manual &&
+        result.kind === 'native' &&
+        shouldSuppressIgnoredNativeUpdate({
+          ignoredBuild: ignoredNativeBuild,
+          installedBuild: input.installedVersionCode,
+          latestBuild: result.update.build,
+        })
+      ) {
+        input.setPendingUpdate(null);
+        input.setStatus('deferred');
+        input.setStatusMessage('Update prompt dismissed for this build');
+        return;
+      }
+
+      if (
+        !input.manual &&
+        result.kind === 'eas' &&
+        isDeferredUntilNextLocalDay({ deferredAt, now: new Date() })
+      ) {
+        input.setPendingUpdate(null);
+        input.setStatus('deferred');
+        input.setStatusMessage('Update prompt deferred until tomorrow');
+        return;
+      }
+
       input.setPendingUpdate(result);
 
       if (result.kind === 'native') {
@@ -310,6 +331,17 @@ async function runUpdateCheck(input: UpdateCheckInput) {
       }
     });
   }
+}
+
+async function getActiveIgnoredNativeBuild(installedVersionCode: number) {
+  const ignoredNativeBuild = await readIgnoredNativeUpdateBuild();
+
+  if (ignoredNativeBuild !== null && installedVersionCode >= ignoredNativeBuild) {
+    await clearIgnoredNativeUpdateBuild();
+    return null;
+  }
+
+  return ignoredNativeBuild;
 }
 
 async function downloadEasUpdate(input: {
@@ -355,6 +387,19 @@ async function deferUpdatePrompt(input: {
   });
 }
 
+async function ignoreNativeUpdateBuild(input: {
+  build: number;
+  mountedRef: { current: boolean };
+  setStatus: (value: UpdateStatus) => void;
+  setStatusMessage: (value: string) => void;
+}) {
+  await saveIgnoredNativeUpdateBuild(input.build);
+  applyIfMounted(input.mountedRef, () => {
+    input.setStatus('deferred');
+    input.setStatusMessage('Update prompt dismissed for this build');
+  });
+}
+
 function canUseEasUpdates() {
   return !__DEV__ && Updates.isEnabled;
 }
@@ -377,6 +422,30 @@ function getNativeManifestUrl() {
 
   const url = Constants.expoConfig?.extra?.nativeUpdateManifestUrl;
   return typeof url === 'string' && url.trim() ? url.trim() : ANDROID_UPDATE_MANIFEST_URL;
+}
+
+async function openAndroidUpdateUrl(apkUrl: string) {
+  try {
+    const parsedUrl = new URL(apkUrl);
+
+    if (parsedUrl.protocol !== 'https:') {
+      throw new Error('The update download link is invalid.');
+    }
+
+    const canOpen = await Linking.canOpenURL(apkUrl);
+
+    if (!canOpen) {
+      throw new Error('No browser is available to open the update download.');
+    }
+
+    await Linking.openURL(apkUrl);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to open the update download.';
+    Alert.alert('Unable to open update', message);
+  }
 }
 
 function formatLastCheckLabel(value: string | null) {

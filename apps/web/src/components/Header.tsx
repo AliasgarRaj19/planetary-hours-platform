@@ -1,4 +1,5 @@
 import { LocationSelector } from './LocationSelector';
+import { getAndroidApkUrl } from '../config/androidRelease';
 import type { SelectedLocation } from '../services/locationService';
 
 type HeaderProps = {
@@ -14,6 +15,8 @@ export function Header({
   onSelectLocation,
   openLocationSelector,
 }: HeaderProps) {
+  const apkUrl = getAndroidApkUrl();
+
   return (
     <header className="site-header">
       <div>
@@ -21,11 +24,23 @@ export function Header({
         <h1>Planetary Hours</h1>
       </div>
       <div className="header-meta" aria-label="Current context">
-        <LocationSelector
-          location={location}
-          onSelectLocation={onSelectLocation}
-          openOnMount={openLocationSelector}
-        />
+        <div className="header-location-stack">
+          {apkUrl ? (
+            <a
+              aria-label="Download the Planetary Hours Android app"
+              className="header-download-link"
+              href={apkUrl}
+              rel="noopener noreferrer">
+              <span aria-hidden="true">APK</span>
+              Download the app
+            </a>
+          ) : null}
+          <LocationSelector
+            location={location}
+            onSelectLocation={onSelectLocation}
+            openOnMount={openLocationSelector}
+          />
+        </div>
         <span>{dateTimeLabel}</span>
       </div>
     </header>

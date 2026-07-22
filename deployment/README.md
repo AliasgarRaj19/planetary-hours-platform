@@ -14,6 +14,14 @@ Health check URL:
 http://127.0.0.1:8080/health
 ```
 
+Android APK download URL:
+
+```bash
+VITE_ANDROID_APK_URL=https://YOUR_DOMAIN/downloads/planetary-hours-v1.0.0-beta.apk
+```
+
+The Vite frontend reads this public URL at build time. For Docker and VPS deployments, set it in `.env.production` before running `docker compose ... up -d --build`.
+
 ## Local Docker Build Validation
 
 ```bash
@@ -33,6 +41,7 @@ docker compose -f docker-compose.prod.yml config
 ```bash
 cd /opt/projects/planetary-hours-platform
 cp .env.production.example .env.production
+# Edit .env.production and set VITE_ANDROID_APK_URL to the final HTTPS APK URL.
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 

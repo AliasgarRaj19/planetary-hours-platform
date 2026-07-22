@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        VITE_ANDROID_APK_URL: ${VITE_ANDROID_APK_URL:-}
     container_name: planetary-hours-web
     restart: unless-stopped
     ports:

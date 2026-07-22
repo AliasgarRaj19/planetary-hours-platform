@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   formatLocationMode,
+  SettingsBrandingFooter,
   SettingsMenuRow,
   SettingsSection,
   settingsStyles,
@@ -64,6 +65,8 @@ export default function SettingsScreen() {
             title="Disclaimer"
           />
         </SettingsSection>
+
+        <SettingsBrandingFooter />
       </ScrollView>
     </SafeAreaView>
   );

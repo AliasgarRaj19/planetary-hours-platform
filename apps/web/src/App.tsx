@@ -4,8 +4,10 @@ import { DayNightInfoCard } from './components/DayNightInfoCard';
 import { SummaryCards } from './components/SummaryCards';
 import { PlanetaryHoursTable } from './components/PlanetaryHoursTable';
 import { SolarSystemBackground } from './components/SolarSystemBackground';
+import { Footer } from './components/Footer';
 import {
   buildPlanetaryHourSummary,
+  calculateCountdownToHourEnd,
   generatePlanetaryHoursSchedule,
   getVisiblePlanetaryHours,
   type PlanetaryHourScheduleRow,
@@ -170,7 +172,7 @@ function App() {
           <SummaryCards
             currentHour={planetaryHourSummary.currentHour}
             nextHour={planetaryHourSummary.nextHour}
-            timeRemainingMilliseconds={planetaryHourSummary.timeRemainingMilliseconds}
+            timeRemainingMilliseconds={calculateCountdownToHourEnd(planetaryHourSummary.currentHour)}
             isLoading={isScheduleLoading}
             hasError={hasScheduleError}
             timezone={selectedLocation?.timezone ?? null}
@@ -182,6 +184,7 @@ function App() {
             timezone={selectedLocation?.timezone ?? null}
           />
         </section>
+        <Footer />
       </div>
     </main>
   );

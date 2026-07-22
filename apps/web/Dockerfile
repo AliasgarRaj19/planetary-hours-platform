@@ -2,6 +2,9 @@ FROM node:lts-alpine AS build
 
 WORKDIR /app/apps/web
 
+ARG VITE_ANDROID_APK_URL
+ENV VITE_ANDROID_APK_URL=$VITE_ANDROID_APK_URL
+
 COPY apps/web/package*.json ./
 RUN npm ci
 

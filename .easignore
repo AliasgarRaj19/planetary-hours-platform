@@ -1,0 +1,13 @@
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.expo/
+**/.expo/
+.eas-inspect*/
+**/.eas-inspect*/
+.git/
+**/.git/
+.env
+.env.production
+npm-debug.log*

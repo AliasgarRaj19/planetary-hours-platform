@@ -71,6 +71,17 @@ export function calculateTimeRemaining(
   return Math.max(0, currentHour.endTime.getTime() - now.getTime());
 }
 
+export function calculateCountdownToHourEnd(
+  currentHour: PlanetaryHourScheduleRow | null,
+  nowMilliseconds = Date.now(),
+) {
+  if (!currentHour) {
+    return null;
+  }
+
+  return Math.max(0, currentHour.endTime.getTime() - nowMilliseconds);
+}
+
 export function buildPlanetaryHourSummary(
   schedule: PlanetaryHourScheduleRow[],
   now: Date,

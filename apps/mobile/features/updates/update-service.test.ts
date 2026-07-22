@@ -10,10 +10,13 @@ import {
   createStartupUpdateCoordinator,
   downloadCompatibleEasUpdate,
 } from './update-service';
-import { isDeferredUntilNextLocalDay as isDeferredUntilNextLocalDayPreference } from './update-preferences';
+import {
+  isDeferredUntilNextLocalDay as isDeferredUntilNextLocalDayPreference,
+  shouldSuppressIgnoredNativeUpdate,
+} from './update-preferences';
 
 const manifest: AndroidUpdateManifest = {
-  apkUrl: 'http://31.97.205.245/downloads/planetary-hours-v1.0.0-beta.apk',
+  apkUrl: 'https://planetaryhours.signalgrowth.in/downloads/planetary-hours-v1.0.0-beta.apk',
   build: 2,
   publishedAt: '2026-07-20T00:00:00Z',
   releaseNotes: ['Added self-hosted update checks', 'Improved beta downloads'],
@@ -29,6 +32,12 @@ describe('Android update manifest', () => {
   it('rejects invalid manifest JSON shapes', () => {
     expect(parseAndroidUpdateManifest({ build: '2' })).toBeNull();
     expect(parseAndroidUpdateManifest({ ...manifest, releaseNotes: [1] })).toBeNull();
+    expect(
+      parseAndroidUpdateManifest({
+        ...manifest,
+        apkUrl: 'ftp://example.com/downloads/planetary-hours-v1.0.0-beta.apk',
+      }),
+    ).toBeNull();
     expect(parseAndroidUpdateManifest({ ...manifest, apkUrl: 'file:///app.apk' })).toBeNull();
   });
 
@@ -85,7 +94,7 @@ describe('hybrid update priority', () => {
         build: 1,
       }),
       installedVersionCode: 1,
-      nativeManifestUrl: 'http://31.97.205.245/downloads/android-update.json',
+      nativeManifestUrl: 'https://planetaryhours.signalgrowth.in/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('none');
@@ -100,7 +109,7 @@ describe('hybrid update priority', () => {
         build: 1,
       }),
       installedVersionCode: 1,
-      nativeManifestUrl: 'http://31.97.205.245/downloads/android-update.json',
+      nativeManifestUrl: 'https://planetaryhours.signalgrowth.in/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('eas');
@@ -113,10 +122,27 @@ describe('hybrid update priority', () => {
       checkEasUpdate,
       fetchNativeManifest: async () => manifest,
       installedVersionCode: 1,
-      nativeManifestUrl: 'http://31.97.205.245/downloads/android-update.json',
+      nativeManifestUrl: 'https://planetaryhours.signalgrowth.in/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('native');
+    expect(checkEasUpdate).not.toHaveBeenCalled();
+  });
+
+  it('does not convert manifest failures into an up-to-date result', async () => {
+    const checkEasUpdate = vi.fn(async () => ({ available: false }) as const);
+
+    await expect(
+      checkHybridUpdate({
+        canCheckEasUpdates: true,
+        checkEasUpdate,
+        fetchNativeManifest: async () => {
+          throw new Error('Update server is unavailable. Please try again later.');
+        },
+        installedVersionCode: 1,
+        nativeManifestUrl: 'https://planetaryhours.signalgrowth.in/downloads/android-update.json',
+      }),
+    ).rejects.toThrow('Update server is unavailable. Please try again later.');
     expect(checkEasUpdate).not.toHaveBeenCalled();
   });
 
@@ -193,5 +219,35 @@ describe('update prompt preferences', () => {
 
     expect(coordinator.shouldStart()).toBe(true);
     expect(coordinator.shouldStart()).toBe(false);
+  });
+
+  it('suppresses an automatic prompt for the dismissed native build', () => {
+    expect(
+      shouldSuppressIgnoredNativeUpdate({
+        ignoredBuild: 5,
+        installedBuild: 4,
+        latestBuild: 5,
+      }),
+    ).toBe(true);
+  });
+
+  it('does not suppress a newer native build after a dismissed build', () => {
+    expect(
+      shouldSuppressIgnoredNativeUpdate({
+        ignoredBuild: 5,
+        installedBuild: 4,
+        latestBuild: 6,
+      }),
+    ).toBe(false);
+  });
+
+  it('does not suppress once the installed build reaches the ignored build', () => {
+    expect(
+      shouldSuppressIgnoredNativeUpdate({
+        ignoredBuild: 5,
+        installedBuild: 5,
+        latestBuild: 6,
+      }),
+    ).toBe(false);
   });
 });

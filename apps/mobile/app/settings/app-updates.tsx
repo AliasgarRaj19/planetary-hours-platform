@@ -40,6 +40,10 @@ export default function AppUpdatesScreen() {
                     : 'No release notes provided.'
                 }
               />
+              <SettingsValueRow
+                label="Installation"
+                value="Update Now opens the APK in your browser. Android will ask you to confirm installation."
+              />
             </>
           ) : null}
           <Pressable

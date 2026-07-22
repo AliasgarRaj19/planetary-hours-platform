@@ -1,0 +1,21 @@
+{
+  "name": "planetary-hours-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile:lint": "npm run lint --workspace mobile",
+    "mobile:typecheck": "npm run typecheck --workspace mobile",
+    "mobile:export:android": "npm run export:android --workspace mobile",
+    "web:test": "npm test --workspace planetary-hours-website",
+    "web:build": "npm run build --workspace planetary-hours-website"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "eslint": "^9.39.5",
+    "jsdom": "^25.0.1"
+  }
+}

@@ -46,6 +46,16 @@ export function SettingsValueRow({ label, value }: { label: string; value: strin
   );
 }
 
+export function SettingsBrandingFooter() {
+  return (
+    <View style={styles.brandingFooter}>
+      <Text style={styles.brandingText}>Designed & Developed by</Text>
+      <Text style={styles.brandingText}>Aliasgar Raj • Signal Growth</Text>
+      <Text style={styles.copyrightText}>© 2026 Signal Growth</Text>
+    </View>
+  );
+}
+
 export function formatLocationMode(mode: string) {
   if (mode === 'device') {
     return 'Device location';
@@ -170,5 +180,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     lineHeight: 22,
+  },
+  brandingFooter: {
+    alignItems: 'center',
+    gap: 4,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  brandingText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+    textAlign: 'center',
+  },
+  copyrightText: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 16,
+    textAlign: 'center',
   },
 });

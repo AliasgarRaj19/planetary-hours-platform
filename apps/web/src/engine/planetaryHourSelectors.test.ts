@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generatePlanetaryHoursSchedule } from '@planetary-hours/planetary-engine';
 import {
   calculateTimeRemaining,
+  calculateCountdownToHourEnd,
   findCurrentPlanetaryHour,
   findNextPlanetaryHour,
   formatCountdown,
@@ -120,5 +121,31 @@ describe('planetary hour selectors', () => {
 
     expect(formatCountdown(calculateTimeRemaining(current, new Date('2026-07-19T06:21:46.000Z')))).toBe('00:38:14');
     expect(formatCountdown(calculateTimeRemaining(current, new Date('2026-07-19T08:00:00.000Z')))).toBe('00:00:00');
+  });
+
+  it('selects the next hour immediately after a boundary with non-zero seconds', () => {
+    const schedule = generatePlanetaryHoursSchedule({
+      sunriseTime: '2026-07-19T06:00:40.000Z',
+      sunsetTime: '2026-07-19T18:00:40.000Z',
+      nextSunriseTime: '2026-07-20T06:00:40.000Z',
+      date: '2026-07-19T06:00:40.000Z',
+      timezone: 'UTC',
+    }).schedule;
+
+    expect(findCurrentPlanetaryHour(schedule, new Date('2026-07-19T07:00:39.999Z'))?.hour).toBe(1);
+    expect(findCurrentPlanetaryHour(schedule, new Date('2026-07-19T07:00:40.000Z'))?.hour).toBe(2);
+  });
+
+  it('counts down against the exact stored end boundary', () => {
+    const current = {
+      endTime: new Date('2026-07-19T07:00:40.000Z'),
+      hour: 1,
+      planet: 'Sun' as const,
+      startTime: new Date('2026-07-19T06:00:40.000Z'),
+    };
+
+    expect(calculateCountdownToHourEnd(current, new Date('2026-07-19T07:00:39.000Z').getTime())).toBe(1000);
+    expect(calculateCountdownToHourEnd(current, new Date('2026-07-19T07:00:40.000Z').getTime())).toBe(0);
+    expect(calculateCountdownToHourEnd(current, new Date('2026-07-19T07:00:41.000Z').getTime())).toBe(0);
   });
 });

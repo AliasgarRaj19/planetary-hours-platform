@@ -1,5 +1,6 @@
 export const ANDROID_UPDATE_MANIFEST_URL =
-  'http://31.97.205.245/downloads/android-update.json';
+  process.env.EXPO_PUBLIC_ANDROID_UPDATE_MANIFEST_URL ??
+  'https://planetaryhours.signalgrowth.in/downloads/android-update.json';
 
 export type AndroidUpdateManifest = {
   apkUrl: string;
@@ -96,7 +97,7 @@ export function parseAndroidUpdateManifest(value: unknown): AndroidUpdateManifes
   try {
     const parsedApkUrl = new URL(apkUrl);
 
-    if (parsedApkUrl.protocol !== 'http:' && parsedApkUrl.protocol !== 'https:') {
+    if (parsedApkUrl.protocol !== 'https:') {
       return null;
     }
   } catch {

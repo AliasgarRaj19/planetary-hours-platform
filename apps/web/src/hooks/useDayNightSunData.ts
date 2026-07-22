@@ -4,6 +4,7 @@ import {
   fetchDayNightSunData,
   type DayNightSunData,
 } from '../services/sunriseSunsetService';
+import { getDateKeyInTimezone } from '@planetary-hours/planetary-engine';
 
 type UseDayNightSunDataResult = {
   sunData: DayNightSunData | null;
@@ -18,7 +19,7 @@ export function useDayNightSunData(
   const [sunData, setSunData] = useState<DayNightSunData | null>(null);
   const [status, setStatus] = useState('Select a location to load sunrise and sunset.');
   const [retryCount, setRetryCount] = useState(0);
-  const localDateKey = location ? getDateKey(now, location.timezone) : '';
+  const localDateKey = location ? getDateKeyInTimezone(now, location.timezone) : '';
 
   useEffect(() => {
     let isMounted = true;
@@ -69,13 +70,4 @@ export function useDayNightSunData(
     status,
     retry: () => setRetryCount((current) => current + 1),
   };
-}
-
-function getDateKey(date: Date, timezone: string) {
-  return new Intl.DateTimeFormat('en-CA', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: timezone,
-    year: 'numeric',
-  }).format(date);
 }
