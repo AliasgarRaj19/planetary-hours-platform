@@ -1,16 +1,18 @@
-FROM node:lts-alpine AS build
+FROM node:lts AS build
 
-WORKDIR /app/apps/web
+WORKDIR /app
 
 ARG VITE_ANDROID_APK_URL
 ENV VITE_ANDROID_APK_URL=$VITE_ANDROID_APK_URL
 
-COPY apps/web/package*.json ./
-RUN npm ci
+COPY package*.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/planetary-engine/package*.json ./packages/planetary-engine/
+RUN npm ci --workspace planetary-hours-website --workspace @planetary-hours/planetary-engine
 
-COPY apps/web ./
-COPY packages /app/packages
-RUN npm run build
+COPY apps/web ./apps/web
+COPY packages ./packages
+RUN npm run build --workspace planetary-hours-website
 
 FROM nginx:alpine AS runtime
 

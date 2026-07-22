@@ -13,7 +13,6 @@
     "@vitejs/plugin-react": "^4.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "suncalc": "^2.0.1",
     "typescript": "^5.7.2",
     "vite": "^6.0.5"
   },
@@ -22,7 +21,6 @@
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
-    "@types/suncalc": "^1.9.2",
     "jsdom": "^25.0.1",
     "vitest": "^4.1.10"
   }
