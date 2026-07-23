@@ -2,7 +2,7 @@
   "expo": {
     "name": "Planetary Hours",
     "slug": "planetary-hours",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "planetary-hours",
@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.planetaryhours.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"

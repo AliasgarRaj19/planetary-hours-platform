@@ -3,5 +3,8 @@ module.exports = function babelConfig(api) {
 
   return {
     presets: ['babel-preset-expo'],
+    plugins: [
+      require('babel-preset-expo/build/expo-router-plugin').expoRouterBabelPlugin,
+    ],
   };
 };
