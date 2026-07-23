@@ -6,6 +6,7 @@ import { PlanetaryHoursTable } from './components/PlanetaryHoursTable';
 import { SolarSystemBackground } from './components/SolarSystemBackground';
 import { Footer } from './components/Footer';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import {
   buildPlanetaryHourSummary,
   calculateCountdownToHourEnd,
@@ -192,11 +193,14 @@ function HomePage() {
 }
 
 function App() {
+  if (window.location.pathname === '/privacy') {
+    return <PrivacyPolicyPage />;
+  }
+
   const staticPages: Record<string, string> = {
     '/about': 'About',
     '/contact': 'Contact',
     '/disclaimer': 'Disclaimer',
-    '/privacy': 'Privacy',
   };
   const staticPageTitle = staticPages[window.location.pathname];
 
