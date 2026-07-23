@@ -277,27 +277,77 @@ h2 {
 }
 
 .site-footer {
-  display: grid;
-  gap: 4px;
-  padding: 0 0 30px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 26px 0 32px;
   color: #94a3b8;
   font-size: 0.82rem;
   font-weight: 650;
   line-height: 1.5;
-  text-align: center;
 }
 
 .site-footer p {
   margin: 0;
 }
 
-.site-footer p:nth-child(2) {
+.footer-branding {
+  display: grid;
+  gap: 4px;
+}
+
+.footer-branding p:first-child {
   color: #b8c4d4;
 }
 
-.site-footer p:last-child {
+.footer-branding p:last-child {
   color: #64748b;
   font-size: 0.78rem;
+}
+
+.footer-links {
+  display: grid;
+  gap: 10px;
+  min-width: min(100%, 360px);
+}
+
+.footer-links h2 {
+  margin: 0;
+  color: #f6c46f;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.footer-links ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-links a {
+  color: #c7d4e5;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.footer-links a:hover,
+.footer-links a:focus {
+  color: #ffe5ad;
+}
+
+.footer-links a:focus-visible {
+  outline: 3px solid rgba(246, 196, 111, 0.24);
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .header-download-link {
@@ -641,6 +691,21 @@ tbody tr.active-hour-row:hover {
 
   .header-download-link {
     width: 100%;
+  }
+
+  .site-footer {
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    text-align: center;
+  }
+
+  .footer-links {
+    min-width: 0;
+  }
+
+  .footer-links ul {
+    justify-content: center;
   }
 
   .day-night-card,
