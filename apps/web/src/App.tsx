@@ -5,6 +5,7 @@ import { SummaryCards } from './components/SummaryCards';
 import { PlanetaryHoursTable } from './components/PlanetaryHoursTable';
 import { SolarSystemBackground } from './components/SolarSystemBackground';
 import { Footer } from './components/Footer';
+import { PlaceholderPage } from './pages/PlaceholderPage';
 import {
   buildPlanetaryHourSummary,
   calculateCountdownToHourEnd,
@@ -20,7 +21,7 @@ import {
 import { useDayNightSunData } from './hooks/useDayNightSunData';
 import { useZonedClock } from './hooks/useZonedClock';
 
-function App() {
+function HomePage() {
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
   const [openLocationSelector, setOpenLocationSelector] = useState(false);
   const { currentDate, currentTime, now } = useZonedClock(selectedLocation?.timezone);
@@ -188,6 +189,22 @@ function App() {
       </div>
     </main>
   );
+}
+
+function App() {
+  const staticPages: Record<string, string> = {
+    '/about': 'About',
+    '/contact': 'Contact',
+    '/disclaimer': 'Disclaimer',
+    '/privacy': 'Privacy',
+  };
+  const staticPageTitle = staticPages[window.location.pathname];
+
+  if (staticPageTitle) {
+    return <PlaceholderPage title={staticPageTitle} />;
+  }
+
+  return <HomePage />;
 }
 
 export default App;
