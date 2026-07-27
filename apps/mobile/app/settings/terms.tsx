@@ -1,6 +1,6 @@
 import { LegalPage } from '@/features/legal/LegalPage';
 import { legalPages } from '@/features/legal/legal-content';
 
-export default function AboutSettingsScreen() {
-  return <LegalPage content={legalPages.about} />;
+export default function TermsSettingsScreen() {
+  return <LegalPage content={legalPages.terms} />;
 }

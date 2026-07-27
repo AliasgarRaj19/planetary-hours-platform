@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -8,6 +8,7 @@ import {
   SettingsSection,
   settingsStyles,
 } from '@/features/settings/settings-ui';
+import { settingsLegalMenuItems } from '@/features/legal/legal-content';
 import { usePlanetary } from '@/features/planetary/planetary-state';
 import { useUpdatesState } from '@/features/updates/update-state';
 
@@ -49,21 +50,14 @@ export default function SettingsScreen() {
         </SettingsSection>
 
         <SettingsSection title="About">
-          <SettingsMenuRow
-            accessibilityLabel="Open About Planetary Hours"
-            onPress={() => router.push('/settings/about')}
-            title="About Planetary Hours"
-          />
-          <SettingsMenuRow
-            accessibilityLabel="Open Privacy Policy"
-            onPress={() => router.push('/settings/privacy-policy')}
-            title="Privacy Policy"
-          />
-          <SettingsMenuRow
-            accessibilityLabel="Open Disclaimer"
-            onPress={() => router.push('/settings/disclaimer')}
-            title="Disclaimer"
-          />
+          {settingsLegalMenuItems.map((item) => (
+            <SettingsMenuRow
+              accessibilityLabel={item.accessibilityLabel}
+              key={item.title}
+              onPress={() => router.push(item.href as Href)}
+              title={item.title}
+            />
+          ))}
         </SettingsSection>
 
         <SettingsBrandingFooter />

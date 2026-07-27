@@ -37,6 +37,8 @@ export default function RootLayout() {
             <Stack.Screen name="settings/about" options={{ title: 'About Planetary Hours' }} />
             <Stack.Screen name="settings/privacy-policy" options={{ title: 'Privacy Policy' }} />
             <Stack.Screen name="settings/disclaimer" options={{ title: 'Disclaimer' }} />
+            <Stack.Screen name="settings/terms" options={{ title: 'Terms of Use' }} />
+            <Stack.Screen name="settings/contact" options={{ title: 'Contact Us' }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
