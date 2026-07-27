@@ -17,7 +17,7 @@ http://127.0.0.1:8080/health
 Android APK download URL:
 
 ```bash
-VITE_ANDROID_APK_URL=https://planetaryhours.in/downloads/planetary-hours-v1.0.0-beta.apk
+VITE_ANDROID_APK_URL=https://planetaryhours.in/downloads/planetary-hours-1.0.3-build6.apk
 ```
 
 The Vite frontend reads this public URL at build time. For Docker and VPS deployments, set it in `.env.production` before running `docker compose ... up -d --build`.
