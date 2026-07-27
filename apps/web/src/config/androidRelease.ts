@@ -1,5 +1,5 @@
 const configuredApkUrl = import.meta.env.VITE_ANDROID_APK_URL;
-const defaultApkUrl = 'http://31.97.205.245/downloads/planetary-hours-v1.0.0-beta.apk';
+const defaultApkUrl = 'https://planetaryhours.in/downloads/planetary-hours-v1.0.0-beta.apk';
 
 export function getAndroidApkUrl() {
   if (typeof configuredApkUrl !== 'string' || !configuredApkUrl.trim()) {

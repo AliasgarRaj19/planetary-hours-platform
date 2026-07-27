@@ -354,6 +354,15 @@ h2 {
   border-radius: 4px;
 }
 
+.contact-panel {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(10, 17, 29, 0.12);
+  padding: 22px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(4px);
+}
+
 .site-footer {
   display: flex;
   align-items: flex-start;

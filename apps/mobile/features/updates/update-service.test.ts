@@ -16,7 +16,7 @@ import {
 } from './update-preferences';
 
 const manifest: AndroidUpdateManifest = {
-  apkUrl: 'https://planetaryhours.signalgrowth.in/downloads/planetary-hours-v1.0.0-beta.apk',
+  apkUrl: 'https://planetaryhours.in/downloads/planetary-hours-v1.0.0-beta.apk',
   build: 2,
   publishedAt: '2026-07-20T00:00:00Z',
   releaseNotes: ['Added self-hosted update checks', 'Improved beta downloads'],
@@ -94,7 +94,7 @@ describe('hybrid update priority', () => {
         build: 1,
       }),
       installedVersionCode: 1,
-      nativeManifestUrl: 'https://planetaryhours.signalgrowth.in/downloads/android-update.json',
+      nativeManifestUrl: 'https://planetaryhours.in/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('none');
@@ -109,7 +109,7 @@ describe('hybrid update priority', () => {
         build: 1,
       }),
       installedVersionCode: 1,
-      nativeManifestUrl: 'https://planetaryhours.signalgrowth.in/downloads/android-update.json',
+      nativeManifestUrl: 'https://planetaryhours.in/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('eas');
@@ -122,7 +122,7 @@ describe('hybrid update priority', () => {
       checkEasUpdate,
       fetchNativeManifest: async () => manifest,
       installedVersionCode: 1,
-      nativeManifestUrl: 'https://planetaryhours.signalgrowth.in/downloads/android-update.json',
+      nativeManifestUrl: 'https://planetaryhours.in/downloads/android-update.json',
     });
 
     expect(result.kind).toBe('native');
@@ -140,7 +140,7 @@ describe('hybrid update priority', () => {
           throw new Error('Update server is unavailable. Please try again later.');
         },
         installedVersionCode: 1,
-        nativeManifestUrl: 'https://planetaryhours.signalgrowth.in/downloads/android-update.json',
+        nativeManifestUrl: 'https://planetaryhours.in/downloads/android-update.json',
       }),
     ).rejects.toThrow('Update server is unavailable. Please try again later.');
     expect(checkEasUpdate).not.toHaveBeenCalled();

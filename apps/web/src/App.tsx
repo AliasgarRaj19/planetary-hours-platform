@@ -5,8 +5,8 @@ import { SummaryCards } from './components/SummaryCards';
 import { PlanetaryHoursTable } from './components/PlanetaryHoursTable';
 import { SolarSystemBackground } from './components/SolarSystemBackground';
 import { Footer } from './components/Footer';
-import { PlaceholderPage } from './pages/PlaceholderPage';
 import { AboutPage } from './pages/AboutPage';
+import { ContactPage } from './pages/ContactPage';
 import { DisclaimerPage } from './pages/DisclaimerPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsOfUsePage } from './pages/TermsOfUsePage';
@@ -212,13 +212,8 @@ function App() {
     return <TermsOfUsePage />;
   }
 
-  const staticPages: Record<string, string> = {
-    '/contact': 'Contact',
-  };
-  const staticPageTitle = staticPages[window.location.pathname];
-
-  if (staticPageTitle) {
-    return <PlaceholderPage title={staticPageTitle} />;
+  if (window.location.pathname === '/contact') {
+    return <ContactPage />;
   }
 
   return <HomePage />;

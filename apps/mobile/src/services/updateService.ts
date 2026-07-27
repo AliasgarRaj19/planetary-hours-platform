@@ -1,6 +1,6 @@
 export const ANDROID_UPDATE_MANIFEST_URL =
   process.env.EXPO_PUBLIC_ANDROID_UPDATE_MANIFEST_URL ??
-  'https://planetaryhours.signalgrowth.in/downloads/android-update.json';
+  'https://planetaryhours.in/downloads/android-update.json';
 
 export type AndroidUpdateManifest = {
   apkUrl: string;
