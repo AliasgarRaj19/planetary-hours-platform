@@ -7,6 +7,7 @@ import { SolarSystemBackground } from './components/SolarSystemBackground';
 import { Footer } from './components/Footer';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { AboutPage } from './pages/AboutPage';
+import { DisclaimerPage } from './pages/DisclaimerPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import {
   buildPlanetaryHourSummary,
@@ -202,9 +203,12 @@ function App() {
     return <PrivacyPolicyPage />;
   }
 
+  if (window.location.pathname === '/disclaimer') {
+    return <DisclaimerPage />;
+  }
+
   const staticPages: Record<string, string> = {
     '/contact': 'Contact',
-    '/disclaimer': 'Disclaimer',
   };
   const staticPageTitle = staticPages[window.location.pathname];
 
