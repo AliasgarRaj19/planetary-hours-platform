@@ -2,6 +2,7 @@ import { getAndroidApkUrl } from '../config/androidRelease';
 
 const quickLinks = [
   { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Terms of Use', href: '/terms' },
   { label: 'About Us', href: '/about' },
   { label: 'Disclaimer', href: '/disclaimer' },
   { label: 'Contact Us', href: '/contact' },

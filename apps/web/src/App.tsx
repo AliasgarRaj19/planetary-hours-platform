@@ -9,6 +9,7 @@ import { PlaceholderPage } from './pages/PlaceholderPage';
 import { AboutPage } from './pages/AboutPage';
 import { DisclaimerPage } from './pages/DisclaimerPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { TermsOfUsePage } from './pages/TermsOfUsePage';
 import {
   buildPlanetaryHourSummary,
   calculateCountdownToHourEnd,
@@ -205,6 +206,10 @@ function App() {
 
   if (window.location.pathname === '/disclaimer') {
     return <DisclaimerPage />;
+  }
+
+  if (window.location.pathname === '/terms') {
+    return <TermsOfUsePage />;
   }
 
   const staticPages: Record<string, string> = {
