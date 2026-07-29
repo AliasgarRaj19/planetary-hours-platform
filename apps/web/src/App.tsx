@@ -14,6 +14,7 @@ import {
   buildPlanetaryHourSummary,
   calculateCountdownToHourEnd,
   generatePlanetaryHoursSchedule,
+  getDateKeyInTimezone,
   getVisiblePlanetaryHours,
   type PlanetaryHourScheduleRow,
 } from '@planetary-hours/planetary-engine';
@@ -24,10 +25,20 @@ import {
 } from './services/locationService';
 import { useDayNightSunData } from './hooks/useDayNightSunData';
 import { useZonedClock } from './hooks/useZonedClock';
+import { getPlanetaryHours } from './api/planetary-hours';
+import type {
+  WebsitePlanetaryHourContent,
+  WebsitePlanetaryHourRow,
+} from './types/planetaryHoursContent';
+
+type ContentByDay = Partial<Record<number, WebsitePlanetaryHourContent[]>>;
 
 function HomePage() {
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
   const [openLocationSelector, setOpenLocationSelector] = useState(false);
+  const [contentByDay, setContentByDay] = useState<ContentByDay>({});
+  const [contentLoadingDays, setContentLoadingDays] = useState<Set<number>>(() => new Set());
+  const [contentFailedDays, setContentFailedDays] = useState<Set<number>>(() => new Set());
   const { currentDate, currentTime, now } = useZonedClock(selectedLocation?.timezone);
   const {
     retry: retrySunData,
@@ -78,34 +89,126 @@ function HomePage() {
     setOpenLocationSelector(false);
   }
 
+  const requiredContentDays = useMemo(() => {
+    if (!selectedLocation || !sunData) {
+      return [];
+    }
+
+    return uniqueNumbers([
+      getBackendDayOfWeek(sunData.yesterday.sunrise, selectedLocation.timezone),
+      getBackendDayOfWeek(sunData.today.sunrise, selectedLocation.timezone),
+      getBackendDayOfWeek(sunData.tomorrow.sunrise, selectedLocation.timezone),
+    ]);
+  }, [selectedLocation, sunData]);
+
+  useEffect(() => {
+    const missingDays = requiredContentDays.filter(
+      (dayOfWeek) => !contentByDay[dayOfWeek],
+    );
+
+    if (missingDays.length === 0) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
+    setContentLoadingDays((currentDays) => {
+      const nextDays = new Set(currentDays);
+      missingDays.forEach((dayOfWeek) => nextDays.add(dayOfWeek));
+      return nextDays;
+    });
+
+    missingDays.forEach((dayOfWeek) => {
+      getPlanetaryHours(dayOfWeek, controller.signal)
+        .then((content) => {
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          setContentByDay((currentContent) => ({
+            ...currentContent,
+            [dayOfWeek]: content,
+          }));
+          setContentFailedDays((currentDays) => {
+            const nextDays = new Set(currentDays);
+            nextDays.delete(dayOfWeek);
+            return nextDays;
+          });
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            return;
+          }
+
+          setContentFailedDays((currentDays) => new Set(currentDays).add(dayOfWeek));
+        })
+        .finally(() => {
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          setContentLoadingDays((currentDays) => {
+            const nextDays = new Set(currentDays);
+            nextDays.delete(dayOfWeek);
+            return nextDays;
+          });
+        });
+    });
+
+    return () => controller.abort();
+  }, [requiredContentDays]);
+
   const fullPlanetarySchedules = useMemo(() => {
     if (!selectedLocation || !sunData) {
       return null;
     }
 
     try {
-      const todaySchedule = generatePlanetaryHoursSchedule({
+      const todayDayOfWeek = getBackendDayOfWeek(sunData.today.sunrise, selectedLocation.timezone);
+      const yesterdayDayOfWeek = getBackendDayOfWeek(
+        sunData.yesterday.sunrise,
+        selectedLocation.timezone,
+      );
+      const tomorrowDayOfWeek = getBackendDayOfWeek(
+        sunData.tomorrow.sunrise,
+        selectedLocation.timezone,
+      );
+
+      const todaySchedule = mergeScheduleWithContent(
+        generatePlanetaryHoursSchedule({
         sunriseTime: sunData.today.sunrise,
         sunsetTime: sunData.today.sunset,
         nextSunriseTime: sunData.tomorrow.sunrise,
         date: sunData.today.sunrise,
         timezone: selectedLocation.timezone,
-      }).schedule;
+        }).schedule,
+        contentByDay[todayDayOfWeek],
+      );
 
-      const yesterdaySchedule = generatePlanetaryHoursSchedule({
+      const yesterdaySchedule = mergeScheduleWithContent(
+        generatePlanetaryHoursSchedule({
         sunriseTime: sunData.yesterday.sunrise,
         sunsetTime: sunData.yesterday.sunset,
         nextSunriseTime: sunData.today.sunrise,
         date: sunData.yesterday.sunrise,
         timezone: selectedLocation.timezone,
-      }).schedule;
+        }).schedule,
+        contentByDay[yesterdayDayOfWeek],
+      );
 
-      const tomorrowSchedule = generatePlanetaryHoursSchedule({
+      const tomorrowSchedule = mergeScheduleWithContent(
+        generatePlanetaryHoursSchedule({
         sunriseTime: sunData.tomorrow.sunrise,
         sunsetTime: sunData.tomorrow.sunset,
         date: sunData.tomorrow.sunrise,
         timezone: selectedLocation.timezone,
-      }).schedule;
+        }).schedule,
+        contentByDay[tomorrowDayOfWeek],
+      );
 
       return {
         todaySchedule,
@@ -115,7 +218,7 @@ function HomePage() {
     } catch {
       return null;
     }
-  }, [selectedLocation, sunData]);
+  }, [contentByDay, selectedLocation, sunData]);
 
   const completePlanetarySchedule = useMemo(() => {
     if (!fullPlanetarySchedules) {
@@ -129,7 +232,7 @@ function HomePage() {
     ].sort((first, second) => first.startTime.getTime() - second.startTime.getTime());
   }, [fullPlanetarySchedules]);
 
-  const visiblePlanetaryHours = useMemo<PlanetaryHourScheduleRow[]>(() => {
+  const visiblePlanetaryHours = useMemo<WebsitePlanetaryHourRow[]>(() => {
     if (!sunData || !fullPlanetarySchedules) {
       return [];
     }
@@ -151,6 +254,17 @@ function HomePage() {
   );
 
   const isScheduleLoading = !selectedLocation || !sunData || !fullPlanetarySchedules;
+  const isContentLoading = requiredContentDays.some((dayOfWeek) =>
+    contentLoadingDays.has(dayOfWeek),
+  );
+  const hasContentError = requiredContentDays.some((dayOfWeek) =>
+    contentFailedDays.has(dayOfWeek),
+  );
+  const contentStatus = isContentLoading
+    ? 'Loading descriptions and suggestions...'
+    : hasContentError
+      ? 'Descriptions and suggestions are unavailable right now.'
+      : '';
   const hasScheduleError =
     Boolean(selectedLocation) &&
     (sunDataStatus === 'Unable to load sunrise and sunset right now.' ||
@@ -187,6 +301,7 @@ function HomePage() {
             title={planetaryHoursTitle}
             activeHourNumber={planetaryHourSummary.currentHour?.hour ?? null}
             timezone={selectedLocation?.timezone ?? null}
+            contentStatus={contentStatus}
           />
         </section>
         <Footer />
@@ -220,3 +335,29 @@ function App() {
 }
 
 export default App;
+
+function mergeScheduleWithContent(
+  schedule: PlanetaryHourScheduleRow[],
+  content: WebsitePlanetaryHourContent[] | undefined,
+): WebsitePlanetaryHourRow[] {
+  return schedule.map((hour) => {
+    const matchingContent = content?.find((item) => item.hourNumber === hour.hour);
+
+    return {
+      ...hour,
+      description: matchingContent?.description ?? '',
+      suggestion: matchingContent?.suggestion ?? '',
+    };
+  });
+}
+
+function getBackendDayOfWeek(date: Date, timezone: string) {
+  const dateKey = getDateKeyInTimezone(date, timezone);
+  const weekday = new Date(`${dateKey}T12:00:00.000Z`).getUTCDay();
+
+  return weekday === 0 ? 7 : weekday;
+}
+
+function uniqueNumbers(values: number[]) {
+  return Array.from(new Set(values));
+}

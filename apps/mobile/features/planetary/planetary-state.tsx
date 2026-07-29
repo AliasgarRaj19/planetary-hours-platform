@@ -21,6 +21,14 @@ import {
   type PlanetaryHourScheduleRow,
   zonedDateTimeToUtcDate,
 } from '@planetary-hours/planetary-engine';
+import { getPlanetaryHours } from '@/src/api/planetary-hours';
+import {
+  getBackendDayOfWeek,
+  mergePlanetaryHourContent,
+  type PlanetaryHourContentByDay,
+  type PlanetaryHourContentState,
+  type PlanetaryHourWithContent,
+} from './planetary-content';
 import { readLocationPreference, saveLocationPreference } from './location-preferences';
 
 export type Coordinates = {
@@ -41,14 +49,14 @@ export type PlanetaryDaySchedule = {
   daylight: {
     sunrise: Date;
     sunset: Date;
-    hours: PlanetaryHourScheduleRow[];
+    hours: PlanetaryHourWithContent[];
   };
   night: {
     sunset: Date;
     sunrise: Date;
-    hours: PlanetaryHourScheduleRow[];
+    hours: PlanetaryHourWithContent[];
   };
-  schedule: PlanetaryHourScheduleRow[];
+  schedule: PlanetaryHourWithContent[];
 };
 
 type PlanetaryState = {
@@ -58,7 +66,9 @@ type PlanetaryState = {
   currentDate: Date;
   currentSchedule: PlanetaryDaySchedule | null;
   errorMessage: string;
+  ensureContentForDate: (date: Date) => void;
   getScheduleForDate: (date: Date) => PlanetaryDaySchedule | null;
+  hourContentStatus: PlanetaryHourContentState;
   isLoadingLocation: boolean;
   isLocationSelectorOpen: boolean;
   locationDisplayName: string;
@@ -105,6 +115,13 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
   const [locationMode, setLocationMode] = useState<LocationMode>('approximate');
   const [locationStatus, setLocationStatus] = useState('Approximate mode');
   const [now, setNow] = useState(() => new Date());
+  const [hourContentByDay, setHourContentByDay] = useState<PlanetaryHourContentByDay>({});
+  const [hourContentLoadingDays, setHourContentLoadingDays] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [hourContentFailedDays, setHourContentFailedDays] = useState<Set<number>>(
+    () => new Set(),
+  );
   const [timezone, setTimezone] = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
   );
@@ -118,8 +135,60 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
   const currentDate = useMemo(() => dateFromLocalDateKey(currentDateKey), [currentDateKey]);
 
   const getScheduleForDate = useCallback(
-    (date: Date) => buildDaySchedule(date, timezone, coordinates),
-    [coordinates, timezone],
+    (date: Date) => buildDaySchedule(date, timezone, coordinates, hourContentByDay),
+    [coordinates, hourContentByDay, timezone],
+  );
+
+  const loadContentForDay = useCallback(
+    (dayOfWeek: number) => {
+      if (
+        hourContentByDay[dayOfWeek] ||
+        hourContentLoadingDays.has(dayOfWeek) ||
+        hourContentFailedDays.has(dayOfWeek)
+      ) {
+        return;
+      }
+
+      const abortController = new AbortController();
+
+      setHourContentLoadingDays((currentDays) => new Set(currentDays).add(dayOfWeek));
+      getPlanetaryHours(dayOfWeek, abortController.signal)
+        .then((content) => {
+          setHourContentByDay((currentContent) => ({
+            ...currentContent,
+            [dayOfWeek]: content,
+          }));
+          setHourContentFailedDays((currentDays) => {
+            const nextDays = new Set(currentDays);
+            nextDays.delete(dayOfWeek);
+            return nextDays;
+          });
+        })
+        .catch((error: unknown) => {
+          if (isAbortError(error)) {
+            return;
+          }
+
+          setHourContentFailedDays((currentDays) => new Set(currentDays).add(dayOfWeek));
+        })
+        .finally(() => {
+          setHourContentLoadingDays((currentDays) => {
+            const nextDays = new Set(currentDays);
+            nextDays.delete(dayOfWeek);
+            return nextDays;
+          });
+        });
+
+      return () => abortController.abort();
+    },
+    [hourContentByDay, hourContentFailedDays, hourContentLoadingDays],
+  );
+
+  const ensureContentForDate = useCallback(
+    (date: Date) => {
+      loadContentForDay(getBackendDayOfWeek(date, timezone));
+    },
+    [loadContentForDay, timezone],
   );
 
   const currentSchedule = useMemo(
@@ -143,6 +212,12 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
     () => buildPlanetaryHourSummary(completeSchedule, now),
     [completeSchedule, now],
   );
+
+  const hourContentStatus = hourContentLoadingDays.size > 0
+    ? 'loading'
+    : hourContentFailedDays.size > 0
+      ? 'unavailable'
+      : 'idle';
 
   const selectDeviceLocation = useCallback(async (
     requestPermission = true,
@@ -365,6 +440,12 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
     return () => clearTimeout(timerId);
   }, [selectDeviceLocation]);
 
+  useEffect(() => {
+    ensureContentForDate(offsetLocalDate(currentDate, -1));
+    ensureContentForDate(currentDate);
+    ensureContentForDate(offsetLocalDate(currentDate, 1));
+  }, [currentDate, ensureContentForDate]);
+
   const value = useMemo<PlanetaryState>(
     () => ({
       activeHour: summary.currentHour,
@@ -373,8 +454,10 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
       countdownLabel: formatCountdown(calculateCountdownToHourEnd(summary.currentHour)),
       currentDate,
       currentSchedule,
+      ensureContentForDate,
       errorMessage,
       getScheduleForDate,
+      hourContentStatus,
       isLoadingLocation,
       isLocationSelectorOpen,
       locationDisplayName,
@@ -392,8 +475,10 @@ export function PlanetaryProvider({ children }: PropsWithChildren) {
       coordinates,
       currentDate,
       currentSchedule,
+      ensureContentForDate,
       errorMessage,
       getScheduleForDate,
+      hourContentStatus,
       isLoadingLocation,
       isLocationSelectorOpen,
       locationDisplayName,
@@ -525,6 +610,7 @@ function buildDaySchedule(
   date: Date,
   timezone: string,
   coordinates: Coordinates | null,
+  contentByDay: PlanetaryHourContentByDay,
 ): PlanetaryDaySchedule | null {
   try {
     const dateKey = getDateKeyInTimezone(date, timezone);
@@ -577,13 +663,16 @@ function buildDaySchedule(
           second: 0,
           timezone,
         });
-    const schedule = generatePlanetaryHoursSchedule({
+    const schedule = mergePlanetaryHourContent(
+      generatePlanetaryHoursSchedule({
       date: sunrise,
       nextSunriseTime: nextSunrise,
       sunriseTime: sunrise,
       sunsetTime: sunset,
       timezone,
-    }).schedule;
+      }).schedule,
+      contentByDay[getBackendDayOfWeek(scheduleDate, timezone)],
+    );
 
     return {
       date: scheduleDate,
@@ -637,6 +726,15 @@ export function formatCoordinate(value: number) {
 
 function dateFromLocalDateKey(dateKey: string) {
   return new Date(`${dateKey}T12:00:00Z`);
+}
+
+function isAbortError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'AbortError'
+  );
 }
 
 function logDiagnosticsOnce(input: {

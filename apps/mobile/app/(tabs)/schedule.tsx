@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { PlanetaryHourScheduleRow } from '@planetary-hours/planetary-engine';
+import type { PlanetaryHourWithContent } from '@/features/planetary/planetary-content';
 import {
   formatCoordinate,
   formatDate,
@@ -18,6 +18,10 @@ export default function ScheduleScreen() {
     [planetary, selectedDate],
   );
   const isSelectedToday = isSameLocalDate(selectedDate, planetary.currentDate);
+
+  useEffect(() => {
+    planetary.ensureContentForDate(selectedDate);
+  }, [planetary, selectedDate]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -64,6 +68,14 @@ export default function ScheduleScreen() {
 
         {selectedSchedule ? (
           <>
+            {planetary.hourContentStatus === 'loading' ? (
+              <Text style={styles.contentStatus}>Loading descriptions and suggestions...</Text>
+            ) : null}
+            {planetary.hourContentStatus === 'unavailable' ? (
+              <Text style={styles.contentStatus}>
+                Descriptions and suggestions are unavailable offline.
+              </Text>
+            ) : null}
             <ScheduleSection
               activeHour={planetary.activeHour}
               hours={selectedSchedule.daylight.hours}
@@ -103,8 +115,8 @@ function ScheduleSection({
   timezone,
   title,
 }: {
-  activeHour: PlanetaryHourScheduleRow | null;
-  hours: PlanetaryHourScheduleRow[];
+  activeHour: PlanetaryHourWithContent | null;
+  hours: PlanetaryHourWithContent[];
   subtitle: string;
   timezone: string;
   title: string;
@@ -131,6 +143,12 @@ function ScheduleSection({
                 <Text style={styles.rowTime}>
                   {formatTime(hour.startTime, timezone)} - {formatTime(hour.endTime, timezone)}
                 </Text>
+                {hour.description ? (
+                  <Text style={styles.rowContent}>{hour.description}</Text>
+                ) : null}
+                {hour.suggestion ? (
+                  <Text style={styles.rowContent}>{hour.suggestion}</Text>
+                ) : null}
               </View>
               {isActive ? <Text style={styles.activeLabel}>Now</Text> : null}
             </View>
@@ -280,6 +298,17 @@ const styles = StyleSheet.create({
   rowTime: {
     color: '#c8d5e6',
     fontSize: 14,
+  },
+  rowContent: {
+    color: '#dbe7f5',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  contentStatus: {
+    color: '#c8d5e6',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   activeLabel: {
     color: '#f6c46f',

@@ -1,11 +1,12 @@
-import type { PlanetaryHourScheduleRow } from '@planetary-hours/planetary-engine';
 import { formatTimeInTimezone } from '../utils/timeFormatting';
+import type { WebsitePlanetaryHourRow } from '../types/planetaryHoursContent';
 
 type PlanetaryHoursTableProps = {
-  hours: PlanetaryHourScheduleRow[];
+  hours: WebsitePlanetaryHourRow[];
   title: string;
   activeHourNumber: number | null;
   timezone: string | null;
+  contentStatus?: string;
 };
 
 export function PlanetaryHoursTable({
@@ -13,12 +14,18 @@ export function PlanetaryHoursTable({
   title,
   activeHourNumber,
   timezone,
+  contentStatus = '',
 }: PlanetaryHoursTableProps) {
   return (
     <section className="table-section">
       <div className="section-heading">
         <p className="eyebrow">Today</p>
         <h2>{title}</h2>
+        {contentStatus ? (
+          <p className="table-status" role="status">
+            {contentStatus}
+          </p>
+        ) : null}
       </div>
       <div className="table-scroll">
         <table>
@@ -45,8 +52,8 @@ export function PlanetaryHoursTable({
                   </td>
                   <td>{timezone ? formatTimeInTimezone(hour.startTime, timezone) : ''}</td>
                   <td>{timezone ? formatTimeInTimezone(hour.endTime, timezone) : ''}</td>
-                  <td>Coming Soon</td>
-                  <td>Coming Soon</td>
+                  <td>{hour.description ?? ''}</td>
+                  <td>{hour.suggestion ?? ''}</td>
                 </tr>
               ))
             ) : (

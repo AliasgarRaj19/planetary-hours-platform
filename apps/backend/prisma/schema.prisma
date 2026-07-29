@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model PlanetaryHourContent {
+  id          Int      @id @default(autoincrement())
+  dayOfWeek   Int
+  hourNumber  Int
+  description String   @default("")
+  suggestion  String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([dayOfWeek, hourNumber])
+}

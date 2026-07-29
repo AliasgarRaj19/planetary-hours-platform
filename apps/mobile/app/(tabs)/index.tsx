@@ -64,6 +64,11 @@ export default function HomeScreen() {
         {planetary.errorMessage ? (
           <Text style={styles.errorText}>{planetary.errorMessage}</Text>
         ) : null}
+        {planetary.hourContentStatus === 'unavailable' ? (
+          <Text style={styles.contentStatus}>
+            Descriptions and suggestions are unavailable offline.
+          </Text>
+        ) : null}
 
         <View style={styles.summaryGrid}>
           <PlanetaryCard
@@ -275,6 +280,12 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#fca5a5',
     fontSize: 13,
+    lineHeight: 18,
+  },
+  contentStatus: {
+    color: '#c8d5e6',
+    fontSize: 13,
+    fontWeight: '700',
     lineHeight: 18,
   },
   summaryGrid: {
