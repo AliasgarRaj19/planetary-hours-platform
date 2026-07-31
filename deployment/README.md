@@ -19,7 +19,7 @@ Default local health check URLs:
 ```bash
 http://127.0.0.1:8080/health
 http://127.0.0.1:8081/health
-http://127.0.0.1:3000/api/v1/health
+http://127.0.0.1:8082/api/v1/health
 ```
 
 Required production environment variables are listed in `.env.production.example`.
@@ -87,7 +87,7 @@ Do not run development migrations in production.
 docker compose --env-file .env.production -f docker-compose.prod.yml ps
 curl -i http://127.0.0.1:8080/health
 curl -i http://127.0.0.1:8081/health
-curl -i http://127.0.0.1:3000/api/v1/health
+curl -i http://127.0.0.1:8082/api/v1/health
 ```
 
 ## Viewing Logs
