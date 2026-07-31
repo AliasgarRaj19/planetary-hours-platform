@@ -39,7 +39,7 @@ export function Sidebar() {
 function NavigationLink({ label, path }: { label: string; path: string }) {
   return (
     <NavLink
-      className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+      className={({ isActive }: { isActive: boolean }) => `nav-link${isActive ? ' active' : ''}`}
       end={path === '/'}
       to={path}
     >

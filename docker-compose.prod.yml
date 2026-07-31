@@ -16,3 +16,58 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: planetary-hours-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      PORT: ${BACKEND_PORT:-3000}
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?ADMIN_USERNAME is required}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    expose:
+      - "${BACKEND_PORT:-3000}"
+    ports:
+      - "${BACKEND_HOST_PORT:-3000}:${BACKEND_PORT:-3000}"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/v1/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin-panel/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    container_name: planetary-hours-admin
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_PORT:-8081}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    depends_on:
+      backend:
+        condition: service_healthy
