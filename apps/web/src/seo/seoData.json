@@ -1,0 +1,65 @@
+{
+  "site": {
+    "name": "Planetary Hours",
+    "url": "https://planetaryhours.in",
+    "defaultTitle": "Planetary Hours",
+    "titleTemplate": "%s | Planetary Hours",
+    "defaultDescription": "Calculate traditional planetary hours using your selected location, local sunrise and sunset times, and the Chaldean planetary order.",
+    "defaultImage": "/og-image.svg",
+    "themeColor": "#07111f",
+    "locale": "en_US"
+  },
+  "organization": {
+    "name": "Signal Growth",
+    "url": "https://planetaryhours.in",
+    "email": "aliasgerraj7@gmail.com"
+  },
+  "verification": {
+    "google": "GOOGLE_SEARCH_CONSOLE_VERIFICATION_PLACEHOLDER",
+    "bing": "BING_WEBMASTER_VERIFICATION_PLACEHOLDER"
+  },
+  "routes": [
+    {
+      "path": "/",
+      "title": "Planetary Hours",
+      "description": "Calculate traditional planetary hours using your selected location, local sunrise and sunset times, and the Chaldean planetary order.",
+      "changeFrequency": "weekly",
+      "priority": 1
+    },
+    {
+      "path": "/about",
+      "title": "About Planetary Hours",
+      "description": "Learn about Planetary Hours, Signal Growth, and the traditional method behind the planetary-hour calculator.",
+      "changeFrequency": "monthly",
+      "priority": 0.7
+    },
+    {
+      "path": "/privacy",
+      "title": "Privacy Policy",
+      "description": "Read how Planetary Hours handles location, contact, technical, and privacy-related information.",
+      "changeFrequency": "monthly",
+      "priority": 0.6
+    },
+    {
+      "path": "/disclaimer",
+      "title": "Disclaimer",
+      "description": "Review important limitations and user responsibilities for Planetary Hours calculations and information.",
+      "changeFrequency": "monthly",
+      "priority": 0.6
+    },
+    {
+      "path": "/terms",
+      "title": "Terms of Use",
+      "description": "Read the terms that govern use of the Planetary Hours website, mobile app, and related services.",
+      "changeFrequency": "monthly",
+      "priority": 0.6
+    },
+    {
+      "path": "/contact",
+      "title": "Contact Planetary Hours",
+      "description": "Contact Planetary Hours for questions, feedback, technical problems, privacy questions, or download support.",
+      "changeFrequency": "monthly",
+      "priority": 0.7
+    }
+  ]
+}

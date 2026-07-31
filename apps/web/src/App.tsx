@@ -26,6 +26,7 @@ import {
 import { useDayNightSunData } from './hooks/useDayNightSunData';
 import { useZonedClock } from './hooks/useZonedClock';
 import { getPlanetaryHours } from './api/planetary-hours';
+import { usePageSeo } from './seo/usePageSeo';
 import type {
   WebsitePlanetaryHourContent,
   WebsitePlanetaryHourRow,
@@ -311,23 +312,27 @@ function HomePage() {
 }
 
 function App() {
-  if (window.location.pathname === '/about') {
+  const pathname = window.location.pathname;
+
+  usePageSeo(pathname);
+
+  if (pathname === '/about') {
     return <AboutPage />;
   }
 
-  if (window.location.pathname === '/privacy') {
+  if (pathname === '/privacy') {
     return <PrivacyPolicyPage />;
   }
 
-  if (window.location.pathname === '/disclaimer') {
+  if (pathname === '/disclaimer') {
     return <DisclaimerPage />;
   }
 
-  if (window.location.pathname === '/terms') {
+  if (pathname === '/terms') {
     return <TermsOfUsePage />;
   }
 
-  if (window.location.pathname === '/contact') {
+  if (pathname === '/contact') {
     return <ContactPage />;
   }
 
