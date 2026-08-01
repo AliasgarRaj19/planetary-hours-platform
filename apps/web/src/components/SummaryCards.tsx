@@ -3,9 +3,10 @@ import {
   type PlanetaryHourScheduleRow,
 } from '@planetary-hours/planetary-engine';
 import { formatTimeInTimezone } from '../utils/timeFormatting';
+import type { WebsitePlanetaryHourRow } from '../types/planetaryHoursContent';
 
 type SummaryCardsProps = {
-  currentHour: PlanetaryHourScheduleRow | null;
+  currentHour: WebsitePlanetaryHourRow | null;
   nextHour: PlanetaryHourScheduleRow | null;
   timeRemainingMilliseconds: number | null;
   isLoading: boolean;
@@ -50,7 +51,7 @@ export function SummaryCards({
 
 type PlanetaryHourCardProps = {
   title: string;
-  hour: PlanetaryHourScheduleRow | null;
+  hour: (PlanetaryHourScheduleRow | WebsitePlanetaryHourRow) | null;
   isLoading: boolean;
   hasError: boolean;
   timezone: string | null;
@@ -63,6 +64,7 @@ function PlanetaryHourCard({
   hasError,
   timezone,
 }: PlanetaryHourCardProps) {
+  const description = getHourDescription(hour);
   const detail = hour && timezone
     ? `Hour ${hour.hour} | ${formatTimeInTimezone(hour.startTime, timezone)} - ${formatTimeInTimezone(hour.endTime, timezone)}`
     : hasError
@@ -73,7 +75,16 @@ function PlanetaryHourCard({
     <article className="summary-card">
       <p>{title}</p>
       <strong>{hasError ? 'Unavailable' : hour ? hour.planet : isLoading ? 'Loading' : 'Unavailable'}</strong>
+      {description ? <span className="hour-classification">{description}</span> : null}
       <span>{detail}</span>
     </article>
   );
+}
+
+function getHourDescription(hour: PlanetaryHourScheduleRow | WebsitePlanetaryHourRow | null) {
+  if (!hour || !('description' in hour)) {
+    return '';
+  }
+
+  return hour.description?.trim() ?? '';
 }

@@ -1,6 +1,7 @@
 import { getAndroidApkUrl } from '../config/androidRelease';
 
 const quickLinks = [
+  { label: 'Schedule Table', href: '/schedule' },
   { label: 'Privacy Policy', href: '/privacy' },
   { label: 'Terms of Use', href: '/terms' },
   { label: 'About Us', href: '/about' },

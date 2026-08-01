@@ -34,6 +34,13 @@
       "priority": 0.7
     },
     {
+      "path": "/schedule",
+      "title": "Planetary Hours Schedule",
+      "description": "View the complete 24-hour planetary hours schedule for your selected date and location.",
+      "changeFrequency": "weekly",
+      "priority": 0.8
+    },
+    {
       "path": "/privacy",
       "title": "Privacy Policy",
       "description": "Read how Planetary Hours handles location, contact, technical, and privacy-related information.",

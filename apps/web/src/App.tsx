@@ -3,29 +3,31 @@ import { Header } from './components/Header';
 import { DayNightInfoCard } from './components/DayNightInfoCard';
 import { SummaryCards } from './components/SummaryCards';
 import { PlanetaryHoursTable } from './components/PlanetaryHoursTable';
+import { CurrentHourSuggestion } from './components/CurrentHourSuggestion';
 import { SolarSystemBackground } from './components/SolarSystemBackground';
 import { Footer } from './components/Footer';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
 import { DisclaimerPage } from './pages/DisclaimerPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { SchedulePage } from './pages/SchedulePage';
 import { TermsOfUsePage } from './pages/TermsOfUsePage';
 import {
   buildPlanetaryHourSummary,
   calculateCountdownToHourEnd,
   generatePlanetaryHoursSchedule,
-  getDateKeyInTimezone,
   getVisiblePlanetaryHours,
-  type PlanetaryHourScheduleRow,
 } from '@planetary-hours/planetary-engine';
-import {
-  getBrowserPosition,
-  reverseGeocodeCoordinates,
-  type SelectedLocation,
-} from './services/locationService';
+import type { SelectedLocation } from './services/locationService';
 import { useDayNightSunData } from './hooks/useDayNightSunData';
+import { useSelectedLocation } from './hooks/useSelectedLocation';
 import { useZonedClock } from './hooks/useZonedClock';
 import { getPlanetaryHours } from './api/planetary-hours';
+import {
+  getBackendDayOfWeek,
+  mergeScheduleWithContent,
+  uniqueNumbers,
+} from './utils/planetaryContent';
 import { usePageSeo } from './seo/usePageSeo';
 import type {
   WebsitePlanetaryHourContent,
@@ -34,61 +36,29 @@ import type {
 
 type ContentByDay = Partial<Record<number, WebsitePlanetaryHourContent[]>>;
 
-function HomePage() {
-  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
-  const [openLocationSelector, setOpenLocationSelector] = useState(false);
+type HomePageProps = {
+  dateTimeLabel: string;
+  selectedLocation: SelectedLocation | null;
+  now: Date;
+  onSelectLocation: (location: SelectedLocation) => void;
+  openLocationSelector: boolean;
+};
+
+function HomePage({
+  dateTimeLabel,
+  selectedLocation,
+  now,
+  onSelectLocation,
+  openLocationSelector,
+}: HomePageProps) {
   const [contentByDay, setContentByDay] = useState<ContentByDay>({});
   const [contentLoadingDays, setContentLoadingDays] = useState<Set<number>>(() => new Set());
   const [contentFailedDays, setContentFailedDays] = useState<Set<number>>(() => new Set());
-  const { currentDate, currentTime, now } = useZonedClock(selectedLocation?.timezone);
   const {
     retry: retrySunData,
     status: sunDataStatus,
     sunData,
   } = useDayNightSunData(selectedLocation, now);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function requestLocation() {
-      try {
-        const coordinates = await getBrowserPosition();
-        const location = await reverseGeocodeCoordinates(coordinates);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setSelectedLocation(location);
-        setOpenLocationSelector(false);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setOpenLocationSelector(true);
-      }
-    }
-
-    requestLocation();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const dateTimeLabel = useMemo(() => {
-    if (!currentDate || !currentTime) {
-      return 'Local time loading...';
-    }
-
-    return `${currentDate} - ${currentTime}`;
-  }, [currentDate, currentTime]);
-
-  function handleManualLocationSelected(location: SelectedLocation) {
-    setSelectedLocation(location);
-    setOpenLocationSelector(false);
-  }
 
   const requiredContentDays = useMemo(() => {
     if (!selectedLocation || !sunData) {
@@ -278,7 +248,7 @@ function HomePage() {
         <Header
           dateTimeLabel={dateTimeLabel}
           location={selectedLocation}
-          onSelectLocation={handleManualLocationSelected}
+          onSelectLocation={onSelectLocation}
           openLocationSelector={openLocationSelector}
         />
         <section className="content">
@@ -290,12 +260,17 @@ function HomePage() {
             sunData={sunData}
           />
           <SummaryCards
-            currentHour={planetaryHourSummary.currentHour}
+            currentHour={planetaryHourSummary.currentHour as WebsitePlanetaryHourRow | null}
             nextHour={planetaryHourSummary.nextHour}
             timeRemainingMilliseconds={calculateCountdownToHourEnd(planetaryHourSummary.currentHour)}
             isLoading={isScheduleLoading}
             hasError={hasScheduleError}
             timezone={selectedLocation?.timezone ?? null}
+          />
+          <CurrentHourSuggestion
+            currentHour={planetaryHourSummary.currentHour as WebsitePlanetaryHourRow | null}
+            hasError={hasScheduleError || hasContentError}
+            isLoading={isScheduleLoading || isContentLoading}
           />
           <PlanetaryHoursTable
             hours={visiblePlanetaryHours}
@@ -336,33 +311,45 @@ function App() {
     return <ContactPage />;
   }
 
-  return <HomePage />;
+  return <LocationAwareRoute pathname={pathname} />;
+}
+
+function LocationAwareRoute({ pathname }: { pathname: string }) {
+  const {
+    selectedLocation,
+    openLocationSelector,
+    handleLocationSelected,
+  } = useSelectedLocation();
+  const { currentDate, currentTime, now } = useZonedClock(selectedLocation?.timezone);
+  const dateTimeLabel = useMemo(() => {
+    if (!currentDate || !currentTime) {
+      return 'Local time loading...';
+    }
+
+    return `${currentDate} - ${currentTime}`;
+  }, [currentDate, currentTime]);
+
+  if (pathname === '/schedule') {
+    return (
+      <SchedulePage
+        dateTimeLabel={dateTimeLabel}
+        location={selectedLocation}
+        now={now}
+        onSelectLocation={handleLocationSelected}
+        openLocationSelector={openLocationSelector}
+      />
+    );
+  }
+
+  return (
+    <HomePage
+      dateTimeLabel={dateTimeLabel}
+      selectedLocation={selectedLocation}
+      now={now}
+      onSelectLocation={handleLocationSelected}
+      openLocationSelector={openLocationSelector}
+    />
+  );
 }
 
 export default App;
-
-function mergeScheduleWithContent(
-  schedule: PlanetaryHourScheduleRow[],
-  content: WebsitePlanetaryHourContent[] | undefined,
-): WebsitePlanetaryHourRow[] {
-  return schedule.map((hour) => {
-    const matchingContent = content?.find((item) => item.hourNumber === hour.hour);
-
-    return {
-      ...hour,
-      description: matchingContent?.description ?? '',
-      suggestion: matchingContent?.suggestion ?? '',
-    };
-  });
-}
-
-function getBackendDayOfWeek(date: Date, timezone: string) {
-  const dateKey = getDateKeyInTimezone(date, timezone);
-  const weekday = new Date(`${dateKey}T12:00:00.000Z`).getUTCDay();
-
-  return weekday === 0 ? 7 : weekday;
-}
-
-function uniqueNumbers(values: number[]) {
-  return Array.from(new Set(values));
-}

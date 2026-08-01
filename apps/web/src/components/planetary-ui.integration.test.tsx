@@ -2,6 +2,8 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SummaryCards } from './SummaryCards';
 import { PlanetaryHoursTable } from './PlanetaryHoursTable';
+import { Header } from './Header';
+import { CurrentHourSuggestion } from './CurrentHourSuggestion';
 import { generatePlanetaryHoursSchedule } from '@planetary-hours/planetary-engine';
 
 describe('planetary hours UI integration', () => {
@@ -14,9 +16,14 @@ describe('planetary hours UI integration', () => {
   }).schedule;
 
   it('renders synchronized summary cards from engine rows', () => {
+    const currentHour = {
+      ...schedule[4],
+      description: 'Good Hour',
+    };
+
     render(
       <SummaryCards
-        currentHour={schedule[4]}
+        currentHour={currentHour}
         nextHour={schedule[5]}
         timeRemainingMilliseconds={38 * 60 * 1000 + 14 * 1000}
         isLoading={false}
@@ -27,6 +34,7 @@ describe('planetary hours UI integration', () => {
 
     expect(screen.getByText('Current Planetary Hour')).toBeInTheDocument();
     expect(screen.getByText(schedule[4].planet)).toBeInTheDocument();
+    expect(screen.getByText('Good Hour')).toBeInTheDocument();
     expect(screen.getByText(/Hour 5/)).toBeInTheDocument();
     expect(screen.getByText('00:38:14')).toBeInTheDocument();
     expect(screen.getByText(/Hour 6/)).toBeInTheDocument();
@@ -64,5 +72,40 @@ describe('planetary hours UI integration', () => {
 
     expect(screen.getAllByText('Unavailable')).toHaveLength(3);
     expect(screen.getAllByText('Planetary hour data unavailable')).toHaveLength(3);
+  });
+
+  it('renders the current hour suggestion from the active merged row', () => {
+    render(
+      <CurrentHourSuggestion
+        currentHour={{
+          ...schedule[2],
+          suggestion: 'Perform good deeds in this hour and all your work will be accomplished.',
+        }}
+        hasError={false}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Current Hour Suggestion' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Perform good deeds in this hour and all your work will be accomplished.'),
+    ).toBeInTheDocument();
+  });
+
+  it('makes the site identity a clickable home link', () => {
+    render(
+      <Header
+        dateTimeLabel="Monday, July 20, 2026 - 12:00 PM UTC"
+        location={null}
+        onSelectLocation={() => undefined}
+        openLocationSelector={false}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Planetary Hours home' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Schedule Table' })).toHaveAttribute(
+      'href',
+      '/schedule',
+    );
   });
 });

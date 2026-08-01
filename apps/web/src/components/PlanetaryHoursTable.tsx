@@ -7,6 +7,7 @@ type PlanetaryHoursTableProps = {
   activeHourNumber: number | null;
   timezone: string | null;
   contentStatus?: string;
+  periodLabel?: string;
 };
 
 export function PlanetaryHoursTable({
@@ -15,11 +16,12 @@ export function PlanetaryHoursTable({
   activeHourNumber,
   timezone,
   contentStatus = '',
+  periodLabel = 'Today',
 }: PlanetaryHoursTableProps) {
   return (
     <section className="table-section">
       <div className="section-heading">
-        <p className="eyebrow">Today</p>
+        <p className="eyebrow">{periodLabel}</p>
         <h2>{title}</h2>
         {contentStatus ? (
           <p className="table-status" role="status">
@@ -31,12 +33,12 @@ export function PlanetaryHoursTable({
         <table>
           <thead>
             <tr>
-              <th>Hour</th>
-              <th>Planet</th>
-              <th>Start Time</th>
-              <th>End Time</th>
-              <th>Description</th>
-              <th>Suggestion</th>
+              <th className="col-hour">Hour</th>
+              <th className="col-planet">Planet</th>
+              <th className="col-time">Start Time</th>
+              <th className="col-time">End Time</th>
+              <th className="col-content">Description</th>
+              <th className="col-content">Suggestion</th>
             </tr>
           </thead>
           <tbody>
@@ -46,14 +48,18 @@ export function PlanetaryHoursTable({
                   className={hour.hour === activeHourNumber ? 'active-hour-row' : undefined}
                   key={hour.hour}
                 >
-                  <td>{hour.hour}</td>
-                  <td>
+                  <td className="cell-compact">{hour.hour}</td>
+                  <td className="cell-compact">
                     <span className="planet-name">{hour.planet}</span>
                   </td>
-                  <td>{timezone ? formatTimeInTimezone(hour.startTime, timezone) : ''}</td>
-                  <td>{timezone ? formatTimeInTimezone(hour.endTime, timezone) : ''}</td>
-                  <td>{hour.description ?? ''}</td>
-                  <td>{hour.suggestion ?? ''}</td>
+                  <td className="cell-compact">
+                    {timezone ? formatTimeInTimezone(hour.startTime, timezone) : ''}
+                  </td>
+                  <td className="cell-compact">
+                    {timezone ? formatTimeInTimezone(hour.endTime, timezone) : ''}
+                  </td>
+                  <td className="cell-long-text">{hour.description ?? ''}</td>
+                  <td className="cell-long-text">{hour.suggestion ?? ''}</td>
                 </tr>
               ))
             ) : (

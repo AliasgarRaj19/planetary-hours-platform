@@ -1,4 +1,5 @@
 import { Footer } from '../components/Footer';
+import { SiteHomeLink } from '../components/SiteHomeLink';
 import { SolarSystemBackground } from '../components/SolarSystemBackground';
 
 export function TermsOfUsePage() {
@@ -6,6 +7,7 @@ export function TermsOfUsePage() {
     <main className="app-shell">
       <SolarSystemBackground />
       <div className="page-layer static-page-layer">
+        <SiteHomeLink />
         <article className="static-page policy-page">
           <header className="policy-header">
             <p className="eyebrow">Planetary Hours</p>

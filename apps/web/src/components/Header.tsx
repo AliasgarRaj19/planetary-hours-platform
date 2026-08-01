@@ -20,8 +20,16 @@ export function Header({
   return (
     <header className="site-header">
       <div>
-        <p className="eyebrow">Daily celestial rhythm</p>
-        <h1>Planetary Hours</h1>
+        <a className="site-identity-link" href="/" aria-label="Planetary Hours home">
+          <p className="eyebrow">Daily celestial rhythm</p>
+          <h1>Planetary Hours</h1>
+        </a>
+        <nav className="header-nav" aria-label="Primary navigation">
+          <a className="schedule-nav-link" href="/schedule">
+            <span aria-hidden="true">☷</span>
+            Schedule Table
+          </a>
+        </nav>
       </div>
       <div className="header-meta" aria-label="Current context">
         <div className="header-location-stack">
