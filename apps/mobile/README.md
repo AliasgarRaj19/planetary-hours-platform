@@ -1,50 +1,75 @@
-# Welcome to your Expo app 👋
+# Planetary Hours Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Android Production Release
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Run release checks from the repository root:
 
 ```bash
-npm run reset-project
+npm run lint --workspace mobile
+npm run typecheck --workspace mobile
+npm test --workspace mobile
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Run Expo health checks from `apps/mobile`:
 
-## Learn more
+```bash
+npx expo-doctor
+npx expo config --json
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+The production EAS profile builds a Google Play Android App Bundle:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+cd apps/mobile
+eas build --platform android --profile production
+```
 
-## Join the community
+Before starting the build, verify the production public environment values:
 
-Join our community of developers creating universal apps.
+```bash
+npx expo config --json
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Confirm the production profile supplies:
+
+```text
+EXPO_PUBLIC_API_BASE_URL=https://planetaryhours.in
+EXPO_PUBLIC_ANDROID_UPDATE_MANIFEST_URL=https://planetaryhours.in/downloads/android-update.json
+```
+
+Verify Android signing credentials are remote-managed:
+
+```bash
+cd apps/mobile
+eas credentials -p android
+```
+
+After the AAB is generated, verify before uploading to Google Play:
+
+```text
+Package ID: com.planetaryhours.app
+Version name: 1.0.3
+Version code: 6 or the auto-incremented EAS build value
+Target SDK: meets current Google Play target API requirements
+Permissions: foreground location only, ACCESS_COARSE_LOCATION and ACCESS_FINE_LOCATION
+```
+
+Do not commit keystore files or production secrets.
+
+## Expo Development
+
+This is an Expo project using Expo Router.
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the app from `apps/mobile`:
+
+```bash
+npx expo start
+```
+
+The app can be opened in an Android emulator, a development build, or Expo Go where supported.

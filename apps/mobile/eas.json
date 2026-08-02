@@ -24,6 +24,11 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_ANDROID_UPDATE_MANIFEST_URL": "https://planetaryhours.in/downloads/android-update.json",
+        "EXPO_PUBLIC_API_BASE_URL": "https://planetaryhours.in"
+      },
       "android": {
         "buildType": "app-bundle",
         "credentialsSource": "remote"
@@ -34,6 +39,10 @@
       "channel": "production",
       "distribution": "internal",
       "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_ANDROID_UPDATE_MANIFEST_URL": "https://planetaryhours.in/downloads/android-update.json",
+        "EXPO_PUBLIC_API_BASE_URL": "https://planetaryhours.in"
+      },
       "android": {
         "buildType": "apk",
         "credentialsSource": "remote"
