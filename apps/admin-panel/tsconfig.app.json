@@ -27,5 +27,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "../../packages/planetary-engine/src"]
+  "include": ["src", "../../packages/planetary-engine/src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }
