@@ -6,6 +6,7 @@ export function validateEnvironment(config: Record<string, unknown>) {
   const databaseUrl = readString(config.DATABASE_URL);
   const adminPasswordHash = readString(config.ADMIN_PASSWORD_HASH);
   const adminUsername = readString(config.ADMIN_USERNAME);
+  const maxApkUploadBytes = readString(config.MAX_APK_UPLOAD_BYTES);
   const jwtSecret = readString(config.JWT_SECRET);
 
   if (!validNodeEnvironments.has(nodeEnv)) {
@@ -32,6 +33,10 @@ export function validateEnvironment(config: Record<string, unknown>) {
     throw new Error('JWT_SECRET is required');
   }
 
+  if (maxApkUploadBytes && !isPositiveInteger(maxApkUploadBytes)) {
+    throw new Error('MAX_APK_UPLOAD_BYTES must be a positive integer');
+  }
+
   return config;
 }
 
@@ -42,4 +47,9 @@ function readString(value: unknown) {
 function isValidPort(value: string) {
   const port = Number(value);
   return Number.isInteger(port) && port > 0 && port <= 65535;
+}
+
+function isPositiveInteger(value: string) {
+  const parsedValue = Number(value);
+  return Number.isInteger(parsedValue) && parsedValue > 0;
 }

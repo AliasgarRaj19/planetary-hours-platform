@@ -338,6 +338,152 @@
   padding: 28px;
 }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border: 1px solid #e3e8ef;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  padding: 24px;
+}
+
+.settings-panel h3,
+.settings-panel p {
+  margin: 0;
+}
+
+.settings-panel h3 {
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.settings-panel p {
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.mode-options {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  margin: 0;
+  padding: 14px;
+}
+
+.mode-options legend {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 6px;
+}
+
+.mode-options label,
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.settings-field input {
+  min-height: 44px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  color: #0f172a;
+  padding: 0 12px;
+}
+
+.settings-field input[type='file'] {
+  padding: 10px 12px;
+}
+
+.settings-field input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  outline: none;
+}
+
+.settings-inline-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-panel button {
+  min-height: 44px;
+  align-self: flex-start;
+  border: 0;
+  border-radius: 12px;
+  background: #1d4ed8;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0 18px;
+}
+
+.settings-panel button:hover,
+.settings-panel button:focus-visible {
+  background: #1e40af;
+  outline: none;
+}
+
+.settings-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.artifact-details {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid #e3e8ef;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.artifact-details div {
+  display: grid;
+  gap: 4px;
+}
+
+.artifact-details dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.artifact-details dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .planetary-editor {
   padding-bottom: 28px;
 }
@@ -568,6 +714,11 @@
   }
 
   .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-grid,
+  .settings-inline-fields {
     grid-template-columns: 1fr;
   }
 

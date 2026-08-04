@@ -21,6 +21,7 @@ type ContentRecord = {
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
   let records: ContentRecord[];
+  let distribution: AppDistributionRecord;
   let jwtService: JwtService;
 
   beforeEach(async () => {
@@ -30,11 +31,17 @@ describe('AppController (e2e)', () => {
     process.env.JWT_EXPIRES_IN = '1h';
 
     records = createSeedRecords();
+    distribution = createDistributionRecord();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(PrismaService)
-      .useValue(createPrismaMock(() => records))
+      .useValue(
+        createPrismaMock(
+          () => records,
+          () => distribution,
+        ),
+      )
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -65,6 +72,54 @@ describe('AppController (e2e)', () => {
           Array.from({ length: 24 }, (_, index) => index + 1),
         );
       });
+  });
+
+  it('/api/v1/app-distribution/android (GET) returns the active public mode', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/app-distribution/android')
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          platform: 'android',
+          activeMode: 'direct_apk',
+          isEnabled: true,
+          actionUrl: '/api/v1/app-distribution/android/download',
+        });
+      });
+  });
+
+  it('/api/v1/app-distribution/android/download (GET) redirects to the current APK', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/app-distribution/android/download')
+      .expect(302)
+      .expect(
+        'Location',
+        'https://planetaryhours.in/downloads/planetary-hours-1.0.3-build6.apk',
+      );
+  });
+
+  it('/api/v1/admin/app-distribution/android (PUT) rejects missing tokens', () => {
+    return request(app.getHttpServer())
+      .put('/api/v1/admin/app-distribution/android')
+      .send({
+        activeMode: 'google_play',
+        storeUrl:
+          'https://play.google.com/store/apps/details?id=com.planetaryhours.app',
+      })
+      .expect(401);
+  });
+
+  it('/api/v1/admin/app-distribution/android (PUT) validates Play Store URLs', async () => {
+    const token = await loginAndGetToken(app);
+
+    return request(app.getHttpServer())
+      .put('/api/v1/admin/app-distribution/android')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        activeMode: 'google_play',
+        storeUrl: 'https://example.com/not-play-store',
+      })
+      .expect(400);
   });
 
   it('/api/v1/planetary-hours/:dayOfWeek (PUT) rejects missing tokens', () => {
@@ -206,7 +261,10 @@ function createSeedRecords() {
   ).flat();
 }
 
-function createPrismaMock(getRecords: () => ContentRecord[]) {
+function createPrismaMock(
+  getRecords: () => ContentRecord[],
+  getDistribution: () => AppDistributionRecord,
+) {
   return {
     planetaryHourContent: {
       findMany: jest.fn((args: { where: { dayOfWeek: number } }) =>
@@ -239,6 +297,28 @@ function createPrismaMock(getRecords: () => ContentRecord[]) {
         return Promise.resolve(createdRecord);
       }),
     },
+    appDistribution: {
+      findUnique: jest.fn(() => Promise.resolve(getDistribution())),
+      upsert: jest.fn(() => Promise.resolve(getDistribution())),
+      update: jest.fn((args: { data: Partial<AppDistributionRecord> }) => {
+        Object.assign(getDistribution(), args.data, { updatedAt: new Date() });
+        return Promise.resolve(getDistribution());
+      }),
+    },
+    appDistributionArtifact: {
+      create: jest.fn((args: { data: Record<string, unknown> }) => {
+        const artifact = {
+          id: getDistribution().artifacts.length + 1,
+          createdAt: new Date(),
+          ...args.data,
+        };
+        getDistribution().artifacts.unshift(
+          artifact as AppDistributionArtifactRecord,
+        );
+        return Promise.resolve(artifact);
+      }),
+      count: jest.fn(() => Promise.resolve(getDistribution().artifacts.length)),
+    },
     $transaction: jest.fn((operations: Array<Promise<ContentRecord>>) =>
       Promise.all(operations),
     ),
@@ -263,3 +343,58 @@ type UpsertArgs = {
     suggestion: string;
   };
 };
+
+type AppDistributionArtifactRecord = {
+  id: number;
+  distributionId: number;
+  fileName: string;
+  originalFileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  storagePath: string;
+  publicUrl: string;
+  checksumSha256: string;
+  versionName: string | null;
+  versionCode: number | null;
+  createdAt: Date;
+};
+
+type AppDistributionRecord = {
+  id: number;
+  platform: 'android';
+  activeMode: 'direct_apk' | 'google_play';
+  storeUrl: string | null;
+  isEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  artifacts: AppDistributionArtifactRecord[];
+};
+
+function createDistributionRecord(): AppDistributionRecord {
+  return {
+    id: 1,
+    platform: 'android',
+    activeMode: 'direct_apk',
+    storeUrl: null,
+    isEnabled: true,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    artifacts: [
+      {
+        id: 1,
+        distributionId: 1,
+        fileName: 'planetary-hours-1.0.3-build6.apk',
+        originalFileName: 'planetary-hours-1.0.3-build6.apk',
+        mimeType: 'application/vnd.android.package-archive',
+        sizeBytes: 0,
+        storagePath: '',
+        publicUrl:
+          'https://planetaryhours.in/downloads/planetary-hours-1.0.3-build6.apk',
+        checksumSha256: '',
+        versionName: '1.0.3',
+        versionCode: 6,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ],
+  };
+}

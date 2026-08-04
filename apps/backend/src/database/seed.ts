@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from './prisma.service';
+import { seedAppDistribution } from './seed-app-distribution';
 import {
   PLANETARY_HOUR_CONTENT_RECORD_COUNT,
   seedPlanetaryHourContent,
@@ -25,6 +26,11 @@ async function main() {
         `Expected ${PLANETARY_HOUR_CONTENT_RECORD_COUNT} planetary-hour content records, found ${recordCount}`,
       );
     }
+
+    await seedAppDistribution(
+      prisma.appDistribution,
+      prisma.appDistributionArtifact,
+    );
   } finally {
     await prisma.$disconnect();
   }

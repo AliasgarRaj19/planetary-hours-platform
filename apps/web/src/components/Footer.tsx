@@ -1,4 +1,4 @@
-import { getAndroidApkUrl } from '../config/androidRelease';
+import { useAndroidDownloadAction } from '../hooks/useAndroidDownloadAction';
 
 const quickLinks = [
   { label: 'Schedule Table', href: '/schedule' },
@@ -10,7 +10,7 @@ const quickLinks = [
 ];
 
 export function Footer() {
-  const apkUrl = getAndroidApkUrl();
+  const downloadAction = useAndroidDownloadAction();
 
   return (
     <footer className="site-footer">
@@ -24,9 +24,9 @@ export function Footer() {
           <li>
             <a href="/">Home</a>
           </li>
-          {apkUrl ? (
+          {downloadAction.url ? (
             <li>
-              <a href={apkUrl} rel="noopener noreferrer">
+              <a href={downloadAction.url} rel="noopener noreferrer">
                 Downloads
               </a>
             </li>

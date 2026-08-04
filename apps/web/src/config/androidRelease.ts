@@ -1,9 +1,10 @@
 const configuredApkUrl = import.meta.env.VITE_ANDROID_APK_URL;
-const defaultApkUrl = 'https://planetaryhours.in/downloads/planetary-hours-1.0.3-build6.apk';
+export const defaultAndroidApkUrl =
+  'https://planetaryhours.in/downloads/planetary-hours-1.0.3-build6.apk';
 
 export function getAndroidApkUrl() {
   if (typeof configuredApkUrl !== 'string' || !configuredApkUrl.trim()) {
-    return defaultApkUrl;
+    return defaultAndroidApkUrl;
   }
 
   try {
@@ -14,7 +15,9 @@ export function getAndroidApkUrl() {
     }
 
     const url = new URL(trimmedUrl);
-    return url.protocol === 'https:' || url.toString() === defaultApkUrl ? url.toString() : null;
+    return url.protocol === 'https:' || url.toString() === defaultAndroidApkUrl
+      ? url.toString()
+      : null;
   } catch {
     return null;
   }

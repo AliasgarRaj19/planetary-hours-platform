@@ -33,6 +33,39 @@ VITE_API_BASE_URL=https://planetaryhours.in
 ```
 
 The Vite website and admin panel read these public values at Docker build time.
+The website also checks the runtime app-distribution endpoint so the active app
+download destination can be changed from the admin panel without rebuilding the
+website.
+
+## Persistent Download Storage
+
+Create the production download storage directory before enabling admin APK
+uploads:
+
+```bash
+sudo mkdir -p /opt/projects/planetary-hours-platform/storage/downloads
+sudo chown -R "$USER":"$USER" /opt/projects/planetary-hours-platform/storage
+```
+
+The backend container mounts this host directory at:
+
+```bash
+/app/storage/downloads
+```
+
+APK uploads are not stored in Git or inside Docker images, so they survive
+container rebuilds.
+
+## Production Backup Before Distribution Migration
+
+Back up the production database before running migrations:
+
+```bash
+pg_dump "$DATABASE_URL" > planetary-hours-before-app-distribution.sql
+```
+
+The app-distribution migration only adds distribution tables and default Android
+distribution metadata. It does not modify existing planetary-hour content.
 
 ## Local Docker Build Validation
 

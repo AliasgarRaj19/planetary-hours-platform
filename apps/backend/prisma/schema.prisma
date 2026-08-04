@@ -6,6 +6,15 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AppPlatform {
+  android
+}
+
+enum AppDistributionMode {
+  direct_apk
+  google_play
+}
+
 model PlanetaryHourContent {
   id          Int      @id @default(autoincrement())
   dayOfWeek   Int
@@ -16,4 +25,33 @@ model PlanetaryHourContent {
   updatedAt   DateTime @updatedAt
 
   @@unique([dayOfWeek, hourNumber])
+}
+
+model AppDistribution {
+  id         Int                     @id @default(autoincrement())
+  platform   AppPlatform             @unique
+  activeMode AppDistributionMode
+  storeUrl   String?
+  isEnabled  Boolean                 @default(true)
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  artifacts  AppDistributionArtifact[]
+}
+
+model AppDistributionArtifact {
+  id               Int             @id @default(autoincrement())
+  distributionId   Int
+  distribution     AppDistribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
+  fileName         String
+  originalFileName String
+  mimeType         String
+  sizeBytes        Int
+  storagePath      String
+  publicUrl        String
+  checksumSha256   String
+  versionName      String?
+  versionCode      Int?
+  createdAt        DateTime        @default(now())
+
+  @@index([distributionId, createdAt])
 }
