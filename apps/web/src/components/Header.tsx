@@ -7,6 +7,7 @@ type HeaderProps = {
   location: SelectedLocation | null;
   onSelectLocation: (location: SelectedLocation) => void;
   openLocationSelector: boolean;
+  renderBrandHeading?: boolean;
 };
 
 export function Header({
@@ -14,15 +15,21 @@ export function Header({
   location,
   onSelectLocation,
   openLocationSelector,
+  renderBrandHeading = true,
 }: HeaderProps) {
   const apkUrl = getAndroidApkUrl();
+  const brandTitle = renderBrandHeading ? (
+    <h1>Planetary Hours</h1>
+  ) : (
+    <p className="site-title">Planetary Hours</p>
+  );
 
   return (
     <header className="site-header">
       <div>
         <a className="site-identity-link" href="/" aria-label="Planetary Hours home">
           <p className="eyebrow">Daily celestial rhythm</p>
-          <h1>Planetary Hours</h1>
+          {brandTitle}
         </a>
         <nav className="header-nav" aria-label="Primary navigation">
           <a className="schedule-nav-link" href="/schedule">

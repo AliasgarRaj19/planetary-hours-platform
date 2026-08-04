@@ -35,8 +35,8 @@
     },
     {
       "path": "/schedule",
-      "title": "Planetary Hours Schedule",
-      "description": "View the complete 24-hour planetary hours schedule for your selected date and location.",
+      "title": "Planetary Hours Schedule Table",
+      "description": "Explore a complete 24-hour planetary hours schedule table with daytime and nighttime hours calculated from sunrise, sunset, date, and location.",
       "changeFrequency": "weekly",
       "priority": 0.8
     },

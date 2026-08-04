@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.planetaryhours.app",
-      "versionCode": 6,
+      "versionCode": 7,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"

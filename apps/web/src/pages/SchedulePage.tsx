@@ -171,12 +171,13 @@ export function SchedulePage({
           location={location}
           onSelectLocation={onSelectLocation}
           openLocationSelector={openLocationSelector}
+          renderBrandHeading={false}
         />
         <section className="content schedule-page">
           <div className="schedule-header-card">
             <div>
               <p className="eyebrow">Full Schedule</p>
-              <h2>Planetary Hours Schedule</h2>
+              <h1>Planetary Hours Schedule Table</h1>
               <p>{selectedDateLabel}</p>
             </div>
             <div className="schedule-controls" aria-label="Schedule date navigation">
@@ -191,6 +192,20 @@ export function SchedulePage({
               </button>
             </div>
           </div>
+
+          <section className="schedule-explainer" aria-labelledby="schedule-explainer-title">
+            <h2 id="schedule-explainer-title">How the Schedule Table works</h2>
+            <p>
+              The Planetary Hours Schedule Table shows all 24 planetary hours for the selected
+              date and location. Daytime is divided into 12 planetary hours from sunrise to sunset,
+              and nighttime is divided into 12 planetary hours from sunset to the following sunrise.
+            </p>
+            <p>
+              Times change with the date, location, sunrise, and sunset. The ruling planets follow
+              the traditional Chaldean order, while Previous Day, Today, and Next Day let you
+              explore nearby dates without creating separate schedule pages.
+            </p>
+          </section>
 
           <PlanetaryHoursTable
             activeHourNumber={null}

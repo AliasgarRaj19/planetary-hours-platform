@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import {
   buildOrganizationJsonLd,
   buildWebApplicationJsonLd,
+  buildWebPageJsonLd,
   buildWebSiteJsonLd,
 } from './structuredData';
 import {
@@ -69,6 +70,12 @@ function setStructuredData(pageSeo: SeoPageMetadata) {
   setJsonLdScript('website-json-ld', buildWebSiteJsonLd());
   setJsonLdScript('web-application-json-ld', buildWebApplicationJsonLd(pageSeo));
   setJsonLdScript('organization-json-ld', buildOrganizationJsonLd());
+
+  if (pageSeo.path === '/schedule') {
+    setJsonLdScript('web-page-json-ld', buildWebPageJsonLd(pageSeo));
+  } else {
+    document.getElementById('web-page-json-ld')?.remove();
+  }
 }
 
 function setJsonLdScript(id: string, value: object) {

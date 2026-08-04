@@ -41,6 +41,26 @@ export function buildWebApplicationJsonLd(pageSeo: SeoPageMetadata) {
   };
 }
 
+export function buildWebPageJsonLd(pageSeo: SeoPageMetadata) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: pageSeo.title,
+    url: pageSeo.canonicalUrl,
+    description: pageSeo.description,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: siteSeo.name,
+      url: siteSeo.url,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: organizationSeo.name,
+      url: organizationSeo.url,
+    },
+  };
+}
+
 export function buildOrganizationJsonLd() {
   return {
     '@context': 'https://schema.org',
