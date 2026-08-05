@@ -70,3 +70,30 @@ export function buildOrganizationJsonLd() {
     email: organizationSeo.email,
   };
 }
+
+export function buildArticleJsonLd(input: {
+  canonicalUrl: string;
+  description: string;
+  publishedAt?: string | null;
+  title: string;
+  updatedAt?: string | null;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: input.title,
+    description: input.description,
+    url: input.canonicalUrl,
+    datePublished: input.publishedAt ?? undefined,
+    dateModified: input.updatedAt ?? input.publishedAt ?? undefined,
+    publisher: {
+      '@type': 'Organization',
+      name: organizationSeo.name,
+      url: organizationSeo.url,
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': input.canonicalUrl,
+    },
+  };
+}

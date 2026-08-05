@@ -15,6 +15,12 @@ enum AppDistributionMode {
   google_play
 }
 
+enum BlogArticleStatus {
+  draft
+  published
+  unpublished
+}
+
 model PlanetaryHourContent {
   id          Int      @id @default(autoincrement())
   dayOfWeek   Int
@@ -54,4 +60,46 @@ model AppDistributionArtifact {
   createdAt        DateTime        @default(now())
 
   @@index([distributionId, createdAt])
+}
+
+model BlogCategory {
+  id             Int                   @id @default(autoincrement())
+  name           String
+  slug           String                @unique
+  description    String                @default("")
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  articles       BlogArticleCategory[]
+
+  @@index([slug])
+}
+
+model BlogArticle {
+  id             Int                   @id @default(autoincrement())
+  title          String
+  slug           String                @unique
+  excerpt        String                @default("")
+  bodyMarkdown   String                @default("")
+  status         BlogArticleStatus     @default(draft)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  categories     BlogArticleCategory[]
+
+  @@index([status, publishedAt])
+  @@index([slug])
+}
+
+model BlogArticleCategory {
+  articleId  Int
+  categoryId Int
+  article    BlogArticle  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  category   BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, categoryId])
+  @@index([categoryId])
 }

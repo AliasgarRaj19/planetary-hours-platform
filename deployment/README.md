@@ -114,6 +114,20 @@ docker compose --env-file .env.production -f docker-compose.prod.yml run --rm ba
 
 Do not run development migrations in production.
 
+## Dynamic Sitemap
+
+The public website serves `/sitemap.xml` through the web Nginx container, which proxies that path to the backend endpoint:
+
+```bash
+http://backend:3000/api/v1/sitemap.xml
+```
+
+The backend combines stable website routes with currently published blog articles. Draft, unpublished, and future-dated articles are excluded automatically, so publishing or unpublishing blog content updates the sitemap without rebuilding the website.
+
+If an external VPS reverse proxy terminates HTTPS, keep `/sitemap.xml` routed to the website container on port `8080`, or proxy it directly to the backend host port at `/api/v1/sitemap.xml`.
+
+The backend static sitemap route list must stay aligned with the website SEO registry in `apps/web/src/seo/seoData.json`. When adding or removing canonical public pages, update both places and keep the sitemap tests passing.
+
 ## Checking Status
 
 ```bash

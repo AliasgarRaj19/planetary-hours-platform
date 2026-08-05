@@ -4,6 +4,7 @@ const primaryNavigation = [{ label: 'Dashboard', path: '/' }]
 
 const contentNavigation = [
   { label: 'Planetary Hours', path: '/planetary-hours' },
+  { label: 'Blog', path: '/blog' },
   { label: 'Analytics', path: '/analytics' },
   { label: 'Notifications', path: '/notifications' },
   { label: 'Settings', path: '/settings' },

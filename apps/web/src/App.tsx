@@ -7,6 +7,8 @@ import { CurrentHourSuggestion } from './components/CurrentHourSuggestion';
 import { SolarSystemBackground } from './components/SolarSystemBackground';
 import { Footer } from './components/Footer';
 import { AboutPage } from './pages/AboutPage';
+import { BlogArticlePage } from './pages/BlogArticlePage';
+import { BlogIndexPage } from './pages/BlogIndexPage';
 import { ContactPage } from './pages/ContactPage';
 import { DisclaimerPage } from './pages/DisclaimerPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
@@ -309,6 +311,14 @@ function App() {
 
   if (pathname === '/contact') {
     return <ContactPage />;
+  }
+
+  if (pathname === '/blog') {
+    return <BlogIndexPage />;
+  }
+
+  if (pathname.startsWith('/blog/')) {
+    return <BlogArticlePage slug={decodeURIComponent(pathname.replace(/^\/blog\//, ''))} />;
   }
 
   return <LocationAwareRoute pathname={pathname} />;

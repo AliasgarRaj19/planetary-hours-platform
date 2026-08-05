@@ -18,10 +18,28 @@ type ContentRecord = {
   updatedAt: Date;
 };
 
+type BlogCategoryResponse = {
+  slug: string;
+};
+
+type BlogArticleResponse = {
+  title: string;
+  slug: string;
+  status: string;
+  publishedAt: string | null;
+  categories: BlogCategoryResponse[];
+};
+
+type BlogArticleListResponse = {
+  items: BlogArticleResponse[];
+};
+
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
   let records: ContentRecord[];
   let distribution: AppDistributionRecord;
+  let blogArticles: BlogArticleRecord[];
+  let blogCategories: BlogCategoryRecord[];
   let jwtService: JwtService;
 
   beforeEach(async () => {
@@ -32,6 +50,8 @@ describe('AppController (e2e)', () => {
 
     records = createSeedRecords();
     distribution = createDistributionRecord();
+    blogCategories = createBlogCategories();
+    blogArticles = createBlogArticles(blogCategories);
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -40,6 +60,8 @@ describe('AppController (e2e)', () => {
         createPrismaMock(
           () => records,
           () => distribution,
+          () => blogArticles,
+          () => blogCategories,
         ),
       )
       .compile();
@@ -120,6 +142,211 @@ describe('AppController (e2e)', () => {
         storeUrl: 'https://example.com/not-play-store',
       })
       .expect(400);
+  });
+
+  it('/api/v1/blog/articles (GET) returns only currently published articles', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/blog/articles')
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as BlogArticleListResponse;
+
+        expect(body.items).toHaveLength(2);
+        expect(body.items[0]).toMatchObject({
+          title: 'Published Article',
+          slug: 'published-article',
+        });
+      });
+  });
+
+  it('/api/v1/blog/articles (GET) filters by category', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/blog/articles?category=planetary-hours')
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as BlogArticleListResponse;
+
+        expect(body.items).toHaveLength(1);
+        expect(body.items[0].categories[0]).toMatchObject({
+          slug: 'planetary-hours',
+        });
+      });
+  });
+
+  it('/api/v1/blog/articles/:slug (GET) hides drafts, unpublished, and future articles', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/published-article')
+      .expect(200);
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/draft-article')
+      .expect(404);
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/unpublished-article')
+      .expect(404);
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/future-article')
+      .expect(404);
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/published-without-date')
+      .expect(404);
+  });
+
+  it('/api/v1/admin/blog/articles (POST) requires authentication', () => {
+    return request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles')
+      .send(createArticlePayload())
+      .expect(401);
+  });
+
+  it('/api/v1/admin/blog/articles (POST) creates drafts with categories', async () => {
+    const token = await loginAndGetToken(app);
+
+    return request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles')
+      .set('Authorization', `Bearer ${token}`)
+      .send(createArticlePayload())
+      .expect(201)
+      .expect((response) => {
+        const body = response.body as BlogArticleResponse;
+
+        expect(body).toMatchObject({
+          title: 'New Draft',
+          slug: 'new-draft',
+          status: 'draft',
+        });
+        expect(body.categories).toHaveLength(1);
+      });
+  });
+
+  it('/api/v1/admin/blog/articles (POST) rejects invalid and duplicate slugs', async () => {
+    const token = await loginAndGetToken(app);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ...createArticlePayload(), slug: 'Invalid Slug' })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ...createArticlePayload(), slug: 'published-article' })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          message: 'Slug is already in use',
+        });
+      });
+  });
+
+  it('/api/v1/admin/blog/articles/:id (PUT) rejects duplicate article slugs with controlled errors', async () => {
+    const token = await loginAndGetToken(app);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/admin/blog/articles/2')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ slug: 'published-article' })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          message: 'Slug is already in use',
+        });
+      });
+  });
+
+  it('/api/v1/admin/blog/categories rejects duplicate slugs with controlled errors', async () => {
+    const token = await loginAndGetToken(app);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/categories')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Duplicate Category', slug: 'planetary-hours' })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          message: 'Slug is already in use',
+        });
+      });
+
+    await request(app.getHttpServer())
+      .put('/api/v1/admin/blog/categories/2')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ slug: 'planetary-hours' })
+      .expect(400)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          message: 'Slug is already in use',
+        });
+      });
+  });
+
+  it('/api/v1/admin/blog/articles/:id publish and unpublish changes public visibility', async () => {
+    const token = await loginAndGetToken(app);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles/2/publish')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201)
+      .expect((response) => {
+        const body = response.body as BlogArticleResponse;
+
+        expect(body.status).toBe('published');
+        expect(body.publishedAt).toBeTruthy();
+      });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/draft-article')
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles/2/unpublish')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201)
+      .expect((response) => {
+        const body = response.body as BlogArticleResponse;
+
+        expect(body.status).toBe('unpublished');
+      });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/draft-article')
+      .expect(404);
+  });
+
+  it('/api/v1/sitemap.xml includes published articles and excludes hidden articles', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/sitemap.xml')
+      .expect(200)
+      .expect((response) => {
+        expect(response.headers['content-type']).toContain('application/xml');
+        expect(response.text).toContain(
+          '<?xml version="1.0" encoding="UTF-8"?>',
+        );
+        expect(response.text).toContain('https://planetaryhours.in/');
+        expect(response.text).toContain('https://planetaryhours.in/about');
+        expect(response.text).toContain('https://planetaryhours.in/schedule');
+        expect(response.text).toContain('https://planetaryhours.in/blog');
+        expect(response.text).toContain('https://planetaryhours.in/privacy');
+        expect(response.text).toContain('https://planetaryhours.in/disclaimer');
+        expect(response.text).toContain('https://planetaryhours.in/terms');
+        expect(response.text).toContain('https://planetaryhours.in/contact');
+        expect(response.text).toContain(
+          'https://planetaryhours.in/blog/published-article',
+        );
+        expect(response.text).toContain(
+          'https://planetaryhours.in/blog/escaped-&amp;-article',
+        );
+        expect(response.text).toContain(
+          '<lastmod>2026-01-01T00:00:00.000Z</lastmod>',
+        );
+        expect(response.text).not.toContain('draft-article');
+        expect(response.text).not.toContain('unpublished-article');
+        expect(response.text).not.toContain('future-article');
+        expect(response.text).not.toContain('published-without-date');
+        expect(response.text).not.toContain(
+          '<loc>https://planetaryhours.in/blog/draft-article</loc>',
+        );
+      });
   });
 
   it('/api/v1/planetary-hours/:dayOfWeek (PUT) rejects missing tokens', () => {
@@ -247,6 +474,16 @@ function createPayload() {
   }));
 }
 
+function createArticlePayload() {
+  return {
+    title: 'New Draft',
+    slug: 'new-draft',
+    excerpt: 'A new draft article.',
+    bodyMarkdown: '# Heading\n\nArticle body.',
+    categoryIds: [1],
+  };
+}
+
 function createSeedRecords() {
   return Array.from({ length: 7 }, (_, dayIndex) =>
     Array.from({ length: 24 }, (_, hourIndex) => ({
@@ -261,9 +498,19 @@ function createSeedRecords() {
   ).flat();
 }
 
+class PrismaUniqueConstraintError extends Error {
+  readonly code = 'P2002';
+
+  constructor() {
+    super('Unique constraint failed');
+  }
+}
+
 function createPrismaMock(
   getRecords: () => ContentRecord[],
   getDistribution: () => AppDistributionRecord,
+  getBlogArticles: () => BlogArticleRecord[],
+  getBlogCategories: () => BlogCategoryRecord[],
 ) {
   return {
     planetaryHourContent: {
@@ -318,6 +565,152 @@ function createPrismaMock(
         return Promise.resolve(artifact);
       }),
       count: jest.fn(() => Promise.resolve(getDistribution().artifacts.length)),
+    },
+    blogArticle: {
+      findMany: jest.fn((args?: BlogFindManyArgs) =>
+        Promise.resolve(
+          findBlogArticles(getBlogArticles(), getBlogCategories(), args),
+        ),
+      ),
+      count: jest.fn((args?: BlogFindManyArgs) =>
+        Promise.resolve(
+          findBlogArticles(getBlogArticles(), getBlogCategories(), args).length,
+        ),
+      ),
+      findFirst: jest.fn((args: BlogFindFirstArgs) =>
+        Promise.resolve(
+          findBlogArticles(getBlogArticles(), getBlogCategories(), {
+            where: args.where,
+          })[0] ?? null,
+        ),
+      ),
+      findUnique: jest.fn((args: { where: { id: number } }) =>
+        Promise.resolve(
+          toBlogArticleWithCategories(
+            getBlogArticles().find((article) => article.id === args.where.id),
+            getBlogCategories(),
+          ),
+        ),
+      ),
+      create: jest.fn((args: BlogCreateArgs) => {
+        if (
+          getBlogArticles().some((article) => article.slug === args.data.slug)
+        ) {
+          return Promise.reject(new PrismaUniqueConstraintError());
+        }
+
+        const article = {
+          id: getBlogArticles().length + 1,
+          title: args.data.title,
+          slug: args.data.slug,
+          excerpt: args.data.excerpt,
+          bodyMarkdown: args.data.bodyMarkdown,
+          status: args.data.status ?? 'draft',
+          seoTitle: args.data.seoTitle ?? null,
+          seoDescription: args.data.seoDescription ?? null,
+          publishedAt: args.data.publishedAt ?? null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          categoryIds:
+            args.data.categories?.create.map((item) => item.categoryId) ?? [],
+        } satisfies BlogArticleRecord;
+        getBlogArticles().push(article);
+        return Promise.resolve(
+          toBlogArticleWithCategories(article, getBlogCategories()),
+        );
+      }),
+      update: jest.fn((args: BlogUpdateArgs) => {
+        const article = getBlogArticles().find(
+          (item) => item.id === args.where.id,
+        );
+
+        if (!article) {
+          return Promise.reject(new Error('not found'));
+        }
+
+        if (
+          args.data.slug &&
+          getBlogArticles().some(
+            (item) => item.slug === args.data.slug && item.id !== article.id,
+          )
+        ) {
+          return Promise.reject(new PrismaUniqueConstraintError());
+        }
+
+        Object.assign(article, args.data, { updatedAt: new Date() });
+        if (args.data.categories?.create) {
+          article.categoryIds = args.data.categories.create.map(
+            (item) => item.categoryId,
+          );
+        }
+        return Promise.resolve(
+          toBlogArticleWithCategories(article, getBlogCategories()),
+        );
+      }),
+    },
+    blogCategory: {
+      findMany: jest.fn((args?: { where?: { id?: { in: number[] } } }) => {
+        const categories = getBlogCategories();
+        if (args?.where?.id?.in) {
+          return Promise.resolve(
+            categories.filter((category) =>
+              args.where?.id?.in.includes(category.id),
+            ),
+          );
+        }
+        return Promise.resolve(categories);
+      }),
+      create: jest.fn((args: { data: BlogCategoryInput }) => {
+        if (
+          getBlogCategories().some(
+            (category) => category.slug === args.data.slug,
+          )
+        ) {
+          return Promise.reject(new PrismaUniqueConstraintError());
+        }
+        const category = {
+          id: getBlogCategories().length + 1,
+          description: '',
+          seoTitle: null,
+          seoDescription: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ...args.data,
+        };
+        getBlogCategories().push(category);
+        return Promise.resolve(category);
+      }),
+      update: jest.fn(
+        (args: { where: { id: number }; data: Partial<BlogCategoryInput> }) => {
+          const category = getBlogCategories().find(
+            (item) => item.id === args.where.id,
+          );
+          if (!category) {
+            return Promise.reject(new Error('not found'));
+          }
+          if (
+            args.data.slug &&
+            getBlogCategories().some(
+              (item) => item.slug === args.data.slug && item.id !== category.id,
+            )
+          ) {
+            return Promise.reject(new PrismaUniqueConstraintError());
+          }
+          Object.assign(category, args.data, { updatedAt: new Date() });
+          return Promise.resolve(category);
+        },
+      ),
+    },
+    blogArticleCategory: {
+      deleteMany: jest.fn((args: { where: { articleId: number } }) => {
+        const article = getBlogArticles().find(
+          (item) => item.id === args.where.articleId,
+        );
+        if (article) {
+          article.categoryIds = [];
+        }
+        return Promise.resolve({ count: 0 });
+      }),
     },
     $transaction: jest.fn((operations: Array<Promise<ContentRecord>>) =>
       Promise.all(operations),
@@ -396,5 +789,255 @@ function createDistributionRecord(): AppDistributionRecord {
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
       },
     ],
+  };
+}
+
+type BlogCategoryRecord = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type BlogArticleRecord = {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string;
+  bodyMarkdown: string;
+  status: 'draft' | 'published' | 'unpublished';
+  seoTitle: string | null;
+  seoDescription: string | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  categoryIds: number[];
+};
+
+type BlogCategoryInput = Partial<BlogCategoryRecord> & {
+  name: string;
+  slug: string;
+};
+
+type BlogFindManyArgs = {
+  where?: {
+    AND?: Array<{ publishedAt: { lte?: Date; not?: null } }>;
+    slug?: string;
+    status?: string;
+    publishedAt?: { lte: Date };
+    categories?: { some: { category: { slug: string } } };
+  };
+  skip?: number;
+  take?: number;
+};
+
+type BlogFindFirstArgs = {
+  where: NonNullable<BlogFindManyArgs['where']>;
+};
+
+type BlogCreateArgs = {
+  data: {
+    title: string;
+    slug: string;
+    excerpt: string;
+    bodyMarkdown: string;
+    status?: 'draft' | 'published' | 'unpublished';
+    seoTitle?: string | null;
+    seoDescription?: string | null;
+    publishedAt?: Date | null;
+    categories?: { create: Array<{ categoryId: number }> };
+  };
+};
+
+type BlogUpdateArgs = {
+  where: { id: number };
+  data: Partial<BlogCreateArgs['data']>;
+};
+
+function createBlogCategories(): BlogCategoryRecord[] {
+  return [
+    {
+      id: 1,
+      name: 'Planetary Hours',
+      slug: 'planetary-hours',
+      description: '',
+      seoTitle: null,
+      seoDescription: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    },
+    {
+      id: 2,
+      name: 'Timing',
+      slug: 'timing',
+      description: '',
+      seoTitle: null,
+      seoDescription: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    },
+  ];
+}
+
+function createBlogArticles(
+  categories: BlogCategoryRecord[],
+): BlogArticleRecord[] {
+  const [category, secondaryCategory] = categories;
+
+  return [
+    createBlogArticle({
+      id: 1,
+      title: 'Published Article',
+      slug: 'published-article',
+      status: 'published',
+      publishedAt: new Date('2026-01-01T00:00:00.000Z'),
+      categoryIds: [category.id],
+    }),
+    createBlogArticle({
+      id: 2,
+      title: 'Draft Article',
+      slug: 'draft-article',
+      status: 'draft',
+      publishedAt: null,
+      categoryIds: [category.id],
+    }),
+    createBlogArticle({
+      id: 3,
+      title: 'Unpublished Article',
+      slug: 'unpublished-article',
+      status: 'unpublished',
+      publishedAt: new Date('2026-01-01T00:00:00.000Z'),
+      categoryIds: [category.id],
+    }),
+    createBlogArticle({
+      id: 4,
+      title: 'Future Article',
+      slug: 'future-article',
+      status: 'published',
+      publishedAt: new Date('2999-01-01T00:00:00.000Z'),
+      categoryIds: [category.id],
+    }),
+    createBlogArticle({
+      id: 5,
+      title: 'Published Without Date',
+      slug: 'published-without-date',
+      status: 'published',
+      publishedAt: null,
+      categoryIds: [category.id],
+    }),
+    createBlogArticle({
+      id: 6,
+      title: 'Escaped Article',
+      slug: 'escaped-&-article',
+      status: 'published',
+      publishedAt: new Date('2026-01-01T00:00:00.000Z'),
+      categoryIds: [secondaryCategory.id],
+    }),
+  ];
+}
+
+function createBlogArticle(
+  input: Pick<
+    BlogArticleRecord,
+    'categoryIds' | 'id' | 'publishedAt' | 'slug' | 'status' | 'title'
+  >,
+): BlogArticleRecord {
+  return {
+    id: input.id,
+    title: input.title,
+    slug: input.slug,
+    excerpt: `${input.title} excerpt.`,
+    bodyMarkdown: '# Article body',
+    status: input.status,
+    seoTitle: null,
+    seoDescription: null,
+    publishedAt: input.publishedAt,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    categoryIds: input.categoryIds,
+  };
+}
+
+function findBlogArticles(
+  articles: BlogArticleRecord[],
+  categories: BlogCategoryRecord[],
+  args?: BlogFindManyArgs,
+) {
+  let result = articles;
+
+  if (args?.where?.slug) {
+    result = result.filter((article) => article.slug === args.where?.slug);
+  }
+
+  if (args?.where?.status) {
+    result = result.filter((article) => article.status === args.where?.status);
+  }
+
+  if (args?.where?.publishedAt?.lte) {
+    result = result.filter(
+      (article) =>
+        article.publishedAt !== null &&
+        article.publishedAt.getTime() <= args.where!.publishedAt!.lte.getTime(),
+    );
+  }
+
+  for (const condition of args?.where?.AND ?? []) {
+    if ('not' in condition.publishedAt) {
+      result = result.filter((article) => article.publishedAt !== null);
+    }
+
+    if (condition.publishedAt.lte) {
+      result = result.filter(
+        (article) =>
+          article.publishedAt !== null &&
+          article.publishedAt.getTime() <= condition.publishedAt.lte!.getTime(),
+      );
+    }
+  }
+
+  if (args?.where?.categories?.some.category.slug) {
+    const category = categories.find(
+      (item) => item.slug === args.where?.categories?.some.category.slug,
+    );
+    result = category
+      ? result.filter((article) => article.categoryIds.includes(category.id))
+      : [];
+  }
+
+  result = [...result].sort(
+    (first, second) => second.updatedAt.getTime() - first.updatedAt.getTime(),
+  );
+
+  if (typeof args?.skip === 'number' || typeof args?.take === 'number') {
+    result = result.slice(
+      args.skip ?? 0,
+      (args.skip ?? 0) + (args.take ?? result.length),
+    );
+  }
+
+  return result.map((article) =>
+    toBlogArticleWithCategories(article, categories),
+  );
+}
+
+function toBlogArticleWithCategories(
+  article: BlogArticleRecord | undefined,
+  categories: BlogCategoryRecord[],
+) {
+  if (!article) {
+    return null;
+  }
+
+  return {
+    ...article,
+    categories: article.categoryIds.map((categoryId) => ({
+      articleId: article.id,
+      categoryId,
+      category: categories.find((category) => category.id === categoryId)!,
+    })),
   };
 }

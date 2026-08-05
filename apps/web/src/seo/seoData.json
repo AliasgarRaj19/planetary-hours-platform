@@ -41,6 +41,13 @@
       "priority": 0.8
     },
     {
+      "path": "/blog",
+      "title": "Planetary Hours Blog",
+      "description": "Read Planetary Hours articles about planetary-hour meaning, calculation methods, planetary days, and traditional timing practices.",
+      "changeFrequency": "weekly",
+      "priority": 0.8
+    },
+    {
       "path": "/privacy",
       "title": "Privacy Policy",
       "description": "Read how Planetary Hours handles location, contact, technical, and privacy-related information.",

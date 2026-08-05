@@ -7,7 +7,9 @@ import { validateEnvironment } from './config/env.validation';
 import { AppDistributionModule } from './app-distribution/app-distribution.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { BlogModule } from './blog/blog.module';
 import { PlanetaryHoursModule } from './planetary-hours/planetary-hours.module';
+import { SitemapModule } from './sitemap/sitemap.module';
 
 @Module({
   imports: [
@@ -18,8 +20,10 @@ import { PlanetaryHoursModule } from './planetary-hours/planetary-hours.module';
     }),
     AppDistributionModule,
     AuthModule,
+    BlogModule,
     HealthModule,
     PlanetaryHoursModule,
+    SitemapModule,
   ],
 })
 export class AppModule {}
