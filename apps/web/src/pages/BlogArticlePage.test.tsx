@@ -35,8 +35,10 @@ describe('BlogArticlePage', () => {
     const { rerender } = render(<BlogArticlePage slug="article-a" />);
 
     expect(await screen.findByRole('heading', { name: 'Article A' })).toBeInTheDocument();
-    expect(document.title).toBe('Article A | Planetary Hours');
-    expect(document.getElementById('article-json-ld')).toBeTruthy();
+    await waitFor(() => {
+      expect(document.title).toBe('Article A | Planetary Hours');
+      expect(document.getElementById('article-json-ld')).toBeTruthy();
+    });
 
     rerender(<BlogArticlePage slug="article-b" />);
 

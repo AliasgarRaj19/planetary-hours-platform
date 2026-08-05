@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { BLOG_TAB_NAME, BLOG_TAB_TITLE } from '@/features/blog/blog-navigation';
 
 export default function TabLayout() {
   return (
@@ -30,6 +31,15 @@ export default function TabLayout() {
             <Ionicons color={color} name="calendar-outline" size={size} />
           ),
           title: 'Schedule',
+        }}
+      />
+      <Tabs.Screen
+        name={BLOG_TAB_NAME}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons color={color} name="newspaper-outline" size={size} />
+          ),
+          title: BLOG_TAB_TITLE,
         }}
       />
       <Tabs.Screen

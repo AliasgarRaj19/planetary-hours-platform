@@ -40,8 +40,21 @@ export async function getPublishedArticles(page = 1) {
   return requestBlog<BlogArticleListResponse>(`/api/v1/blog/articles?page=${page}`);
 }
 
+export async function getPublishedArticlesByCategory(category: string, page = 1) {
+  const searchParams = new URLSearchParams({
+    category,
+    page: String(page),
+  });
+
+  return requestBlog<BlogArticleListResponse>(`/api/v1/blog/articles?${searchParams.toString()}`);
+}
+
 export async function getPublishedArticle(slug: string) {
   return requestBlog<BlogArticle>(`/api/v1/blog/articles/${encodeURIComponent(slug)}`);
+}
+
+export async function getPublishedCategories() {
+  return requestBlog<BlogCategory[]>('/api/v1/blog/categories');
 }
 
 async function requestBlog<T>(path: string): Promise<T> {

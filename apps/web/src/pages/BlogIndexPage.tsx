@@ -2,15 +2,24 @@ import { useEffect, useState } from 'react';
 import { Footer } from '../components/Footer';
 import { SiteHomeLink } from '../components/SiteHomeLink';
 import { SolarSystemBackground } from '../components/SolarSystemBackground';
-import { getPublishedArticles, type BlogArticle } from '../api/blog';
+import {
+  getPublishedArticles,
+  getPublishedArticlesByCategory,
+  type BlogArticle,
+} from '../api/blog';
 
 export function BlogIndexPage() {
   const [articles, setArticles] = useState<BlogArticle[]>([]);
   const [status, setStatus] = useState('Loading articles...');
   const [error, setError] = useState('');
+  const category = new URLSearchParams(window.location.search).get('category') ?? '';
 
   useEffect(() => {
-    getPublishedArticles()
+    const request = category
+      ? getPublishedArticlesByCategory(category)
+      : getPublishedArticles();
+
+    request
       .then((response) => {
         setArticles(response.items);
         setStatus('');
@@ -19,7 +28,7 @@ export function BlogIndexPage() {
         setError('Blog articles are unavailable right now.');
         setStatus('');
       });
-  }, []);
+  }, [category]);
 
   return (
     <main className="app-shell">

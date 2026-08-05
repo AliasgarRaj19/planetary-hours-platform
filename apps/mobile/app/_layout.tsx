@@ -39,6 +39,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings/disclaimer" options={{ title: 'Disclaimer' }} />
             <Stack.Screen name="settings/terms" options={{ title: 'Terms of Use' }} />
             <Stack.Screen name="settings/contact" options={{ title: 'Contact Us' }} />
+            <Stack.Screen name="blog/[slug]" options={{ title: 'Blog Article' }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
