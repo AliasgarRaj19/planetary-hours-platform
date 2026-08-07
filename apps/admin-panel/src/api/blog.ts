@@ -35,6 +35,7 @@ export type BlogArticleInput = {
   slug: string
   excerpt: string
   bodyMarkdown: string
+  status?: BlogArticleStatus
   seoTitle?: string | null
   seoDescription?: string | null
   publishedAt?: string | null
@@ -61,7 +62,7 @@ export function createArticle(input: BlogArticleInput) {
   return requestBlog<BlogArticle>('/api/v1/admin/blog/articles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...input, status: 'draft' }),
+    body: JSON.stringify({ ...input, status: input.status ?? 'draft' }),
   })
 }
 

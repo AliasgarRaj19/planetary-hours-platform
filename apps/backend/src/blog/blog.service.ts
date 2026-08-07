@@ -144,12 +144,10 @@ export class BlogService {
   }
 
   async publishArticle(id: number) {
-    const currentArticle = await this.getAdminArticleById(id);
+    await this.getAdminArticleById(id);
     const article = await this.repository.updateArticle(id, {
       status: BLOG_PUBLISHED_STATUS,
-      publishedAt: currentArticle.publishedAt
-        ? new Date(currentArticle.publishedAt)
-        : new Date(),
+      publishedAt: new Date(),
     });
     return toArticleResponse(article);
   }

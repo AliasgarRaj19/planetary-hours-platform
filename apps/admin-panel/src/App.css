@@ -497,6 +497,119 @@
   gap: 18px;
 }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field-helper {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.field-warning {
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+  padding: 9px 10px;
+}
+
+.character-counter {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.character-counter.near-limit {
+  color: #b45309;
+}
+
+.character-counter.over-limit {
+  color: #b91c1c;
+}
+
+.inline-text-button {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0;
+}
+
+.inline-text-button:hover,
+.inline-text-button:focus-visible {
+  color: #1e40af;
+  outline: none;
+  text-decoration: underline;
+}
+
+.schedule-controls-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.schedule-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.settings-inline-fields.compact {
+  gap: 10px;
+}
+
+.article-status-cell {
+  display: grid;
+  gap: 5px;
+}
+
+.article-status-cell small {
+  color: #64748b;
+  font-weight: 750;
+}
+
+.article-status-pill {
+  width: fit-content;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 5px 9px;
+}
+
+.article-status-pill.scheduled {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.article-status-pill.published {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.article-status-pill.unpublished {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .settings-field textarea {
   min-height: 96px;
   resize: vertical;

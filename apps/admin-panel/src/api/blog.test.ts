@@ -34,6 +34,30 @@ describe('admin blog API', () => {
     expect(firstCall[1].body).toContain('"status":"draft"')
   })
 
+  it('allows creating scheduled articles through the protected admin endpoint', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://planetaryhours.in')
+    storeToken('test-token')
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify(createArticleResponse({ status: 'published' })))),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const { createArticle } = await import('./blog')
+
+    await createArticle({
+      title: 'Scheduled Article',
+      slug: 'scheduled-article',
+      excerpt: 'An introduction.',
+      bodyMarkdown: '# Intro',
+      categoryIds: [1],
+      publishedAt: '2999-08-07T10:00:00.000Z',
+      status: 'published',
+    })
+
+    const firstCall = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(firstCall[1].body).toContain('"status":"published"')
+    expect(firstCall[1].body).toContain('"publishedAt":"2999-08-07T10:00:00.000Z"')
+  })
+
   it('publishes and unpublishes articles through admin endpoints', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://planetaryhours.in')
     storeToken('test-token')

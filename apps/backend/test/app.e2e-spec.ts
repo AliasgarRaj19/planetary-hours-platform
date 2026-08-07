@@ -313,6 +313,31 @@ describe('AppController (e2e)', () => {
       .expect(404);
   });
 
+  it('/api/v1/admin/blog/articles/:id/publish sets a scheduled article to publish now', async () => {
+    const token = await loginAndGetToken(app);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/future-article')
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles/4/publish')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201)
+      .expect((response) => {
+        const body = response.body as BlogArticleResponse;
+
+        expect(body.status).toBe('published');
+        expect(new Date(body.publishedAt ?? '').getTime()).toBeLessThanOrEqual(
+          Date.now(),
+        );
+      });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/blog/articles/future-article')
+      .expect(200);
+  });
+
   it('/api/v1/sitemap.xml includes published articles and excludes hidden articles', () => {
     return request(app.getHttpServer())
       .get('/api/v1/sitemap.xml')

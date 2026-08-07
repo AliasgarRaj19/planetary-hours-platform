@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { getAdminArticles, type BlogArticle } from '../../api/blog'
+import { deriveArticleDisplayStatus, formatAdminDateTime } from './article-editor-utils'
 
 export function BlogArticlesPage() {
   const [articles, setArticles] = useState<BlogArticle[]>([])
@@ -60,7 +61,9 @@ export function BlogArticlesPage() {
                     <Link to={`/blog/${article.id}`}>{article.title}</Link>
                   </td>
                   <td>{article.slug}</td>
-                  <td>{article.status}</td>
+                  <td>
+                    <ArticleStatus article={article} />
+                  </td>
                   <td>{article.categories.map((category) => category.name).join(', ') || 'None'}</td>
                   <td>{formatDate(article.publishedAt)}</td>
                   <td>{formatDate(article.updatedAt)}</td>
@@ -78,8 +81,24 @@ export function BlogArticlesPage() {
   )
 }
 
+function ArticleStatus({ article }: { article: BlogArticle }) {
+  const displayStatus = deriveArticleDisplayStatus(article)
+
+  return (
+    <div className="article-status-cell">
+      <span className={`article-status-pill ${displayStatus.toLowerCase()}`}>{displayStatus}</span>
+      {displayStatus === 'Scheduled' && article.publishedAt ? (
+        <small>Scheduled for: {formatAdminDateTime(article.publishedAt)}</small>
+      ) : null}
+      {displayStatus === 'Published' && article.publishedAt ? (
+        <small>Published: {formatAdminDateTime(article.publishedAt)}</small>
+      ) : null}
+    </div>
+  )
+}
+
 function formatDate(value: string | null) {
-  return value ? new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(value)) : '-'
+  return value ? formatAdminDateTime(value) : '-'
 }
 
 function toErrorMessage(error: unknown) {
