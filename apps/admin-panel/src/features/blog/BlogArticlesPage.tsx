@@ -1,12 +1,17 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { getAdminArticles, type BlogArticle } from '../../api/blog'
-import { deriveArticleDisplayStatus, formatAdminDateTime } from './article-editor-utils'
+import {
+  deriveArticleDisplayStatus,
+  formatAdminDateTime,
+  getNextScheduledStatusRefreshDelay,
+} from './article-editor-utils'
 
 export function BlogArticlesPage() {
   const [articles, setArticles] = useState<BlogArticle[]>([])
   const [status, setStatus] = useState('Loading articles...')
   const [error, setError] = useState('')
+  const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
     getAdminArticles()
@@ -19,6 +24,20 @@ export function BlogArticlesPage() {
         setStatus('')
       })
   }, [])
+
+  useEffect(() => {
+    const delay = getNextScheduledStatusRefreshDelay(articles, now)
+
+    if (delay === null) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      setNow(new Date())
+    }, delay)
+
+    return () => window.clearTimeout(timeout)
+  }, [articles, now])
 
   return (
     <section className="page-section">
@@ -62,7 +81,7 @@ export function BlogArticlesPage() {
                   </td>
                   <td>{article.slug}</td>
                   <td>
-                    <ArticleStatus article={article} />
+                    <ArticleStatus article={article} now={now} />
                   </td>
                   <td>{article.categories.map((category) => category.name).join(', ') || 'None'}</td>
                   <td>{formatDate(article.publishedAt)}</td>
@@ -81,8 +100,8 @@ export function BlogArticlesPage() {
   )
 }
 
-function ArticleStatus({ article }: { article: BlogArticle }) {
-  const displayStatus = deriveArticleDisplayStatus(article)
+function ArticleStatus({ article, now }: { article: BlogArticle; now: Date }) {
+  const displayStatus = deriveArticleDisplayStatus(article, now)
 
   return (
     <div className="article-status-cell">

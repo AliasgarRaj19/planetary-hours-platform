@@ -65,6 +65,24 @@ export function deriveArticleDisplayStatus(input: {
   return 'Published'
 }
 
+export function getNextScheduledStatusRefreshDelay(
+  articles: Array<{ publishedAt: string | null; status: BlogArticleStatus }>,
+  now = new Date(),
+) {
+  const nowTime = now.getTime()
+  const nextPublishedAt = articles
+    .filter((article) => article.status === 'published' && article.publishedAt)
+    .map((article) => new Date(article.publishedAt!).getTime())
+    .filter((publishedAt) => publishedAt > nowTime)
+    .sort((first, second) => first - second)[0]
+
+  if (!nextPublishedAt) {
+    return null
+  }
+
+  return Math.max(0, nextPublishedAt - nowTime + 1000)
+}
+
 export function formatAdminDateTime(value: string | null) {
   return value
     ? new Intl.DateTimeFormat('en', {

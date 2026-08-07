@@ -3,6 +3,8 @@ import {
   ARTICLE_FIELD_LIMITS,
   applyTitleChange,
   deriveArticleDisplayStatus,
+  formatAdminDateTime,
+  getNextScheduledStatusRefreshDelay,
   hasSlugChangedForPublishedArticle,
   localDateTimePartsToIso,
   normalizeSlugInput,
@@ -104,6 +106,53 @@ describe('blog article editor utilities', () => {
     expect(deriveArticleDisplayStatus({ status: 'unpublished', publishedAt: null }, now)).toBe(
       'Unpublished',
     )
+  })
+
+  it('derives Published at the scheduled timestamp boundary', () => {
+    const now = new Date('2026-08-07T10:00:00.000Z')
+
+    expect(
+      deriveArticleDisplayStatus(
+        { status: 'published', publishedAt: '2026-08-07T10:00:00.000Z' },
+        now,
+      ),
+    ).toBe('Published')
+  })
+
+  it('formats scheduled datetime for admin display', () => {
+    const formatted = formatAdminDateTime('2026-08-08T10:00:00.000Z')
+
+    expect(formatted).not.toBe('-')
+    expect(formatted).toContain('2026')
+  })
+
+  it('calculates the next local refresh when a scheduled article should become published', () => {
+    const now = new Date('2026-08-07T10:00:00.000Z')
+
+    expect(
+      getNextScheduledStatusRefreshDelay(
+        [
+          { status: 'published', publishedAt: '2026-08-07T10:00:30.000Z' },
+          { status: 'published', publishedAt: '2026-08-07T10:02:00.000Z' },
+          { status: 'draft', publishedAt: '2026-08-07T10:00:10.000Z' },
+        ],
+        now,
+      ),
+    ).toBe(31_000)
+  })
+
+  it('does not schedule a live refresh when no future published article exists', () => {
+    const now = new Date('2026-08-07T10:00:00.000Z')
+
+    expect(
+      getNextScheduledStatusRefreshDelay(
+        [
+          { status: 'published', publishedAt: '2026-08-07T09:00:00.000Z' },
+          { status: 'unpublished', publishedAt: '2026-08-07T11:00:00.000Z' },
+        ],
+        now,
+      ),
+    ).toBeNull()
   })
 
   it('validates scheduling date and time requirements', () => {
