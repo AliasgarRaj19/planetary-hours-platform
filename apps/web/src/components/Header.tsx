@@ -1,4 +1,5 @@
 import { LocationSelector } from './LocationSelector';
+import { trackAppDownloadClick } from '../analytics/events';
 import { useAndroidDownloadAction } from '../hooks/useAndroidDownloadAction';
 import type { SelectedLocation } from '../services/locationService';
 
@@ -45,6 +46,12 @@ export function Header({
               aria-label="Download the Planetary Hours Android app"
               className="header-download-link"
               href={downloadAction.url}
+              onClick={() =>
+                trackAppDownloadClick({
+                  distributionMode: downloadAction.distributionMode,
+                  linkLocation: 'header',
+                })
+              }
               rel="noopener noreferrer">
               <span aria-hidden="true">APK</span>
               {downloadAction.label}

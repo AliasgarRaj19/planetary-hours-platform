@@ -6,6 +6,7 @@ import { PlanetaryHoursTable } from './components/PlanetaryHoursTable';
 import { CurrentHourSuggestion } from './components/CurrentHourSuggestion';
 import { SolarSystemBackground } from './components/SolarSystemBackground';
 import { Footer } from './components/Footer';
+import { AnalyticsConsentBanner } from './components/AnalyticsConsentBanner';
 import { AboutPage } from './pages/AboutPage';
 import { BlogArticlePage } from './pages/BlogArticlePage';
 import { BlogIndexPage } from './pages/BlogIndexPage';
@@ -31,6 +32,7 @@ import {
   uniqueNumbers,
 } from './utils/planetaryContent';
 import { usePageSeo } from './seo/usePageSeo';
+import { useAnalyticsPageView } from './analytics/useAnalyticsPageView';
 import type {
   WebsitePlanetaryHourContent,
   WebsitePlanetaryHourRow,
@@ -290,38 +292,37 @@ function HomePage({
 
 function App() {
   const pathname = window.location.pathname;
+  const routePath = `${window.location.pathname}${window.location.search}`;
 
   usePageSeo(pathname);
+  useAnalyticsPageView(routePath);
+
+  let page;
 
   if (pathname === '/about') {
-    return <AboutPage />;
+    page = <AboutPage />;
+  } else if (pathname === '/privacy') {
+    page = <PrivacyPolicyPage />;
+  } else if (pathname === '/disclaimer') {
+    page = <DisclaimerPage />;
+  } else if (pathname === '/terms') {
+    page = <TermsOfUsePage />;
+  } else if (pathname === '/contact') {
+    page = <ContactPage />;
+  } else if (pathname === '/blog') {
+    page = <BlogIndexPage />;
+  } else if (pathname.startsWith('/blog/')) {
+    page = <BlogArticlePage slug={decodeURIComponent(pathname.replace(/^\/blog\//, ''))} />;
+  } else {
+    page = <LocationAwareRoute pathname={pathname} />;
   }
 
-  if (pathname === '/privacy') {
-    return <PrivacyPolicyPage />;
-  }
-
-  if (pathname === '/disclaimer') {
-    return <DisclaimerPage />;
-  }
-
-  if (pathname === '/terms') {
-    return <TermsOfUsePage />;
-  }
-
-  if (pathname === '/contact') {
-    return <ContactPage />;
-  }
-
-  if (pathname === '/blog') {
-    return <BlogIndexPage />;
-  }
-
-  if (pathname.startsWith('/blog/')) {
-    return <BlogArticlePage slug={decodeURIComponent(pathname.replace(/^\/blog\//, ''))} />;
-  }
-
-  return <LocationAwareRoute pathname={pathname} />;
+  return (
+    <>
+      {page}
+      <AnalyticsConsentBanner />
+    </>
+  );
 }
 
 function LocationAwareRoute({ pathname }: { pathname: string }) {

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Footer } from '../components/Footer';
 import { SiteHomeLink } from '../components/SiteHomeLink';
 import { SolarSystemBackground } from '../components/SolarSystemBackground';
 import { getPublishedArticle, type BlogArticle } from '../api/blog';
+import { trackBlogArticleView } from '../analytics/events';
 import { useDynamicSeo } from '../seo/useDynamicSeo';
 import { renderMarkdownToSafeHtml } from '../utils/markdown';
 
@@ -10,6 +11,7 @@ export function BlogArticlePage({ slug }: { slug: string }) {
   const [article, setArticle] = useState<BlogArticle | null>(null);
   const [status, setStatus] = useState('Loading article...');
   const [notFound, setNotFound] = useState(false);
+  const trackedArticleKey = useRef('');
 
   useEffect(() => {
     let ignore = false;
@@ -59,6 +61,24 @@ export function BlogArticlePage({ slug }: { slug: string }) {
     () => (article ? renderMarkdownToSafeHtml(article.bodyMarkdown) : ''),
     [article],
   );
+
+  useEffect(() => {
+    if (!article) {
+      return;
+    }
+
+    const articleKey = `${article.id}:${article.slug}`;
+
+    if (trackedArticleKey.current === articleKey) {
+      return;
+    }
+
+    trackedArticleKey.current = articleKey;
+    trackBlogArticleView({
+      articleSlug: article.slug,
+      articleTitle: article.title,
+    });
+  }, [article?.id, article?.slug, article?.title]);
 
   return (
     <main className="app-shell">

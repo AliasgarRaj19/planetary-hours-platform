@@ -1,4 +1,5 @@
 import { Footer } from '../components/Footer';
+import { AnalyticsPreferences } from '../components/AnalyticsPreferences';
 import { SiteHomeLink } from '../components/SiteHomeLink';
 import { SolarSystemBackground } from '../components/SolarSystemBackground';
 
@@ -79,6 +80,21 @@ export function PrivacyPolicyPage() {
               <li>Basic server or diagnostic information</li>
             </ul>
             <p>We do not currently use this information for advertising or user profiling.</p>
+
+            <h3>Optional Website Analytics</h3>
+            <p>
+              The public website may use Google Analytics 4 after you choose to allow optional
+              analytics. Analytics helps us understand aggregated usage patterns such as page views,
+              device or browser information, and basic interaction events so we can improve the
+              website.
+            </p>
+            <p>
+              Analytics is consent-based. You may reject analytics, and the website should continue
+              to work normally. Precise latitude and longitude used for planetary-hour calculations
+              are not sent to Google Analytics. Contact-form contents, authentication tokens, email
+              addresses, and private admin data are also not sent to Google Analytics.
+            </p>
+            <AnalyticsPreferences />
           </section>
 
           <section>

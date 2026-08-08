@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react';
+import {
+  trackAppDownloadClick,
+  trackBlogCategorySelect,
+} from '../analytics/events';
 import { getPublishedCategories, type BlogCategory } from '../api/blog';
 import { useAndroidDownloadAction } from '../hooks/useAndroidDownloadAction';
 
@@ -45,7 +49,15 @@ export function Footer() {
             </li>
             {downloadAction.url ? (
               <li>
-                <a href={downloadAction.url} rel="noopener noreferrer">
+                <a
+                  href={downloadAction.url}
+                  onClick={() =>
+                    trackAppDownloadClick({
+                      distributionMode: downloadAction.distributionMode,
+                      linkLocation: 'footer',
+                    })
+                  }
+                  rel="noopener noreferrer">
                   Downloads
                 </a>
               </li>
@@ -73,7 +85,14 @@ export function Footer() {
             <ul>
               {categories.map((category) => (
                 <li key={category.id}>
-                  <a href={`/blog?category=${encodeURIComponent(category.slug)}`}>
+                  <a
+                    href={`/blog?category=${encodeURIComponent(category.slug)}`}
+                    onClick={() =>
+                      trackBlogCategorySelect({
+                        categoryName: category.name,
+                        categorySlug: category.slug,
+                      })
+                    }>
                     {category.name}
                   </a>
                 </li>

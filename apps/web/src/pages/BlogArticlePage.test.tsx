@@ -1,11 +1,17 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { trackBlogArticleView } from '../analytics/events';
+
+vi.mock('../analytics/events', () => ({
+  trackBlogArticleView: vi.fn(),
+}));
 
 describe('BlogArticlePage', () => {
   afterEach(() => {
     cleanup();
     document.head.innerHTML = '';
     document.title = '';
+    vi.clearAllMocks();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
     vi.resetModules();
@@ -35,6 +41,10 @@ describe('BlogArticlePage', () => {
     const { rerender } = render(<BlogArticlePage slug="article-a" />);
 
     expect(await screen.findByRole('heading', { name: 'Article A' })).toBeInTheDocument();
+    expect(trackBlogArticleView).toHaveBeenCalledWith({
+      articleSlug: 'article-a',
+      articleTitle: 'Article A',
+    });
     await waitFor(() => {
       expect(document.title).toBe('Article A | Planetary Hours');
       expect(document.getElementById('article-json-ld')).toBeTruthy();
@@ -81,6 +91,7 @@ describe('BlogArticlePage', () => {
     expect(screen.queryByRole('heading', { name: 'Article A' })).not.toBeInTheDocument();
     expect(document.title).toBe('Planetary Hours');
     expect(document.getElementById('article-json-ld')).toBeNull();
+    expect(trackBlogArticleView).toHaveBeenCalledTimes(1);
   });
 });
 

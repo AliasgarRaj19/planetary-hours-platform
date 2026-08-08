@@ -10,6 +10,7 @@ import { Footer } from '../components/Footer';
 import { Header } from '../components/Header';
 import { PlanetaryHoursTable } from '../components/PlanetaryHoursTable';
 import { SolarSystemBackground } from '../components/SolarSystemBackground';
+import { trackScheduleDateChange } from '../analytics/events';
 import { getPlanetaryHours } from '../api/planetary-hours';
 import type { SelectedLocation } from '../services/locationService';
 import type {
@@ -157,9 +158,29 @@ export function SchedulePage({
   }, [location, selectedDateKey]);
 
   function moveSelectedDate(offset: number) {
-    setSelectedDateKey((currentDateKey) =>
-      currentDateKey ? offsetDateKey(currentDateKey, offset) : todayDateKey,
-    );
+    setSelectedDateKey((currentDateKey) => {
+      const nextDateKey = currentDateKey ? offsetDateKey(currentDateKey, offset) : todayDateKey;
+
+      if (nextDateKey) {
+        trackScheduleDateChange({
+          direction: offset < 0 ? 'previous' : 'next',
+          selectedDate: nextDateKey,
+        });
+      }
+
+      return nextDateKey;
+    });
+  }
+
+  function moveToToday() {
+    setSelectedDateKey(todayDateKey);
+
+    if (todayDateKey) {
+      trackScheduleDateChange({
+        direction: 'today',
+        selectedDate: todayDateKey,
+      });
+    }
   }
 
   return (
@@ -184,7 +205,7 @@ export function SchedulePage({
               <button type="button" onClick={() => moveSelectedDate(-1)}>
                 Previous Day
               </button>
-              <button type="button" onClick={() => setSelectedDateKey(todayDateKey)}>
+              <button type="button" onClick={moveToToday}>
                 Today
               </button>
               <button type="button" onClick={() => moveSelectedDate(1)}>

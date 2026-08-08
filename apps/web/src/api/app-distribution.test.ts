@@ -15,6 +15,7 @@ describe('website app distribution API', () => {
 
     await expect(getAndroidDownloadAction()).resolves.toEqual({
       label: 'Download Android App',
+      distributionMode: 'fallback',
       url: defaultAndroidApkUrl,
       source: 'fallback',
     });
@@ -44,6 +45,7 @@ describe('website app distribution API', () => {
 
     await expect(getAndroidDownloadAction()).resolves.toEqual({
       label: 'Download Android App',
+      distributionMode: 'direct_apk',
       url: 'https://planetaryhours.in/api/v1/app-distribution/android/download',
       source: 'runtime',
     });
@@ -74,6 +76,7 @@ describe('website app distribution API', () => {
 
     await expect(getAndroidDownloadAction()).resolves.toEqual({
       label: 'Get it on Google Play',
+      distributionMode: 'google_play',
       url: playUrl,
       source: 'runtime',
     });

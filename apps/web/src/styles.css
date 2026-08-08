@@ -1061,6 +1061,77 @@ tbody tr.active-hour-row:hover {
   font-weight: 800;
 }
 
+.analytics-consent-banner {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  width: min(720px, calc(100% - 48px));
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 18px;
+  background: rgba(7, 17, 31, 0.94);
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.36);
+  padding: 18px;
+}
+
+.analytics-consent-banner h2 {
+  margin-bottom: 6px;
+  color: #fff5dd;
+  font-size: 1rem;
+}
+
+.analytics-consent-banner p,
+.analytics-preferences p {
+  margin: 0;
+  color: #c9d5e4;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.analytics-consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.analytics-consent-actions button {
+  min-height: 42px;
+  border: 1px solid rgba(246, 196, 111, 0.4);
+  border-radius: 999px;
+  background: rgba(246, 196, 111, 0.12);
+  color: #ffe5ad;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 9px 14px;
+}
+
+.analytics-consent-actions button:hover,
+.analytics-consent-actions button:focus {
+  border-color: rgba(246, 196, 111, 0.72);
+  background: rgba(246, 196, 111, 0.2);
+}
+
+.analytics-consent-actions button:focus-visible {
+  outline: 3px solid rgba(246, 196, 111, 0.24);
+  outline-offset: 3px;
+}
+
+.analytics-preferences {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+}
+
 @keyframes planet-orbit {
   to {
     transform: rotate(360deg);
@@ -1130,6 +1201,13 @@ tbody tr.active-hour-row:hover {
 
   .schedule-controls button {
     flex: 1 1 130px;
+  }
+
+  .analytics-consent-banner {
+    right: 16px;
+    bottom: 16px;
+    grid-template-columns: 1fr;
+    width: calc(100% - 32px);
   }
 
   .sun-time-grid article {

@@ -30,12 +30,17 @@ Public frontend build variables:
 ```bash
 VITE_ANDROID_APK_URL=https://planetaryhours.in/downloads/planetary-hours-1.0.3-build6.apk
 VITE_API_BASE_URL=https://planetaryhours.in
+VITE_GA_MEASUREMENT_ID=G-5XQ5NGQ13N
 ```
 
 The Vite website and admin panel read these public values at Docker build time.
 The website also checks the runtime app-distribution endpoint so the active app
 download destination can be changed from the admin panel without rebuilding the
 website.
+
+`VITE_GA_MEASUREMENT_ID` enables optional Google Analytics 4 tracking on the
+public website after the visitor grants analytics consent. Rebuild the web image
+after changing this value.
 
 ## Persistent Download Storage
 

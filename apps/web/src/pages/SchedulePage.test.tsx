@@ -2,9 +2,14 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SchedulePage } from './SchedulePage';
 import type { SelectedLocation } from '../services/locationService';
+import { trackScheduleDateChange } from '../analytics/events';
 
 vi.mock('../api/planetary-hours', () => ({
   getPlanetaryHours: vi.fn(() => Promise.resolve([])),
+}));
+
+vi.mock('../analytics/events', () => ({
+  trackScheduleDateChange: vi.fn(),
 }));
 
 describe('SchedulePage', () => {
@@ -40,17 +45,29 @@ describe('SchedulePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous Day' }));
     expect(await screen.findByText('Sunday, July 19, 2026')).toBeInTheDocument();
+    expect(trackScheduleDateChange).toHaveBeenLastCalledWith({
+      direction: 'previous',
+      selectedDate: '2026-07-19',
+    });
     expect(window.location.pathname).toBe('/schedule');
     expect(window.location.search).toBe('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Next Day' }));
     fireEvent.click(screen.getByRole('button', { name: 'Next Day' }));
     expect(await screen.findByText('Tuesday, July 21, 2026')).toBeInTheDocument();
+    expect(trackScheduleDateChange).toHaveBeenLastCalledWith({
+      direction: 'next',
+      selectedDate: '2026-07-21',
+    });
     expect(window.location.pathname).toBe('/schedule');
     expect(window.location.search).toBe('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Today' }));
     expect(await screen.findByText('Monday, July 20, 2026')).toBeInTheDocument();
+    expect(trackScheduleDateChange).toHaveBeenLastCalledWith({
+      direction: 'today',
+      selectedDate: '2026-07-20',
+    });
     expect(window.location.pathname).toBe('/schedule');
     expect(window.location.search).toBe('');
   });

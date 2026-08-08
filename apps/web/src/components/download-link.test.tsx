@@ -1,6 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import {
+  trackAppDownloadClick,
+  trackBlogCategorySelect,
+} from '../analytics/events';
 import { Footer } from './Footer';
 import { Header } from './Header';
 
@@ -18,6 +22,7 @@ const publishedCategories = Array.from({ length: 7 }, (_, index) => ({
 vi.mock('../hooks/useAndroidDownloadAction', () => ({
   useAndroidDownloadAction: () => ({
     label: 'Get it on Google Play',
+    distributionMode: 'google_play',
     url: 'https://play.google.com/store/apps/details?id=com.planetaryhours.app',
     source: 'runtime',
   }),
@@ -25,6 +30,11 @@ vi.mock('../hooks/useAndroidDownloadAction', () => ({
 
 vi.mock('../api/blog', () => ({
   getPublishedCategories: () => Promise.resolve(publishedCategories),
+}));
+
+vi.mock('../analytics/events', () => ({
+  trackAppDownloadClick: vi.fn(),
+  trackBlogCategorySelect: vi.fn(),
 }));
 
 describe('runtime download links', () => {
@@ -43,6 +53,16 @@ describe('runtime download links', () => {
       'https://play.google.com/store/apps/details?id=com.planetaryhours.app',
     );
     expect(screen.getByText('Get it on Google Play')).toBeInTheDocument();
+
+    const headerDownloadLink = screen.getByRole('link', {
+      name: 'Download the Planetary Hours Android app',
+    });
+    headerDownloadLink.addEventListener('click', (event) => event.preventDefault());
+    fireEvent.click(headerDownloadLink);
+    expect(trackAppDownloadClick).toHaveBeenCalledWith({
+      distributionMode: 'google_play',
+      linkLocation: 'header',
+    });
   });
 
   it('renders the Footer Downloads link from runtime distribution data', () => {
@@ -52,6 +72,14 @@ describe('runtime download links', () => {
       'href',
       'https://play.google.com/store/apps/details?id=com.planetaryhours.app',
     );
+
+    const footerDownloadLink = screen.getByRole('link', { name: 'Downloads' });
+    footerDownloadLink.addEventListener('click', (event) => event.preventDefault());
+    fireEvent.click(footerDownloadLink);
+    expect(trackAppDownloadClick).toHaveBeenCalledWith({
+      distributionMode: 'google_play',
+      linkLocation: 'footer',
+    });
   });
 
   it('renders the redesigned footer columns and bottom branding', async () => {
@@ -72,6 +100,14 @@ describe('runtime download links', () => {
         'href',
         '/blog?category=category-1',
       );
+    });
+
+    const categoryLink = screen.getByRole('link', { name: 'Category 1' });
+    categoryLink.addEventListener('click', (event) => event.preventDefault());
+    fireEvent.click(categoryLink);
+    expect(trackBlogCategorySelect).toHaveBeenCalledWith({
+      categoryName: 'Category 1',
+      categorySlug: 'category-1',
     });
   });
 

@@ -25,6 +25,7 @@ export type AndroidDistribution = {
 
 export type AndroidDownloadAction = {
   label: string;
+  distributionMode: AndroidDistribution['activeMode'] | 'fallback';
   url: string;
   source: 'runtime' | 'fallback';
 };
@@ -34,6 +35,7 @@ let cachedDistributionPromise: Promise<AndroidDownloadAction> | null = null;
 export function getFallbackAndroidDownloadAction(): AndroidDownloadAction {
   return {
     label: 'Download Android App',
+    distributionMode: 'fallback',
     url: defaultAndroidApkUrl,
     source: 'fallback',
   };
@@ -68,6 +70,7 @@ async function fetchAndroidDownloadAction(): Promise<AndroidDownloadAction> {
 
   return {
     label: distribution.label || 'Download Android App',
+    distributionMode: distribution.activeMode,
     url: resolveActionUrl(distribution.actionUrl),
     source: 'runtime',
   };
