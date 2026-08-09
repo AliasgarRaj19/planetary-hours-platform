@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.production.example
+node_modules
+dist
+coverage
+.git
+.expo
+secrets
+**/secrets
+*.service-account.json
+*service-account*.json
+ga4-service-account.json

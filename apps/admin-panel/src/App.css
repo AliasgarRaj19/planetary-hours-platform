@@ -451,11 +451,27 @@
   padding: 0 12px;
 }
 
+.settings-field select {
+  min-height: 44px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  padding: 0 12px;
+}
+
 .settings-field input[type='file'] {
   padding: 10px 12px;
 }
 
 .settings-field input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  outline: none;
+}
+
+.settings-field select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
   outline: none;
@@ -608,6 +624,102 @@
 .article-status-pill.unpublished {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.analytics-dashboard {
+  padding-bottom: 32px;
+}
+
+.analytics-range-field {
+  min-width: 220px;
+}
+
+.analytics-section {
+  display: grid;
+  gap: 16px;
+}
+
+.analytics-section h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.analytics-metric-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.analytics-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.analytics-grid.two-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-grid.three-columns {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.analytics-table-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #e3e8ef;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  padding: 18px;
+}
+
+.analytics-table-panel h4,
+.analytics-table-panel p {
+  margin: 0;
+}
+
+.analytics-table-panel h4 {
+  color: #0f172a;
+  font-size: 17px;
+}
+
+.analytics-table-panel p {
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.analytics-table-scroll {
+  overflow-x: auto;
+}
+
+.analytics-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.analytics-table th {
+  border-bottom: 1px solid #e3e8ef;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 12px;
+  text-transform: uppercase;
+}
+
+.analytics-table td {
+  border-bottom: 1px solid #edf2f7;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 12px;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.analytics-table tr:last-child td {
+  border-bottom: 0;
 }
 
 .settings-field textarea {
@@ -914,6 +1026,12 @@
   }
 
   .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-metric-grid,
+  .analytics-grid.two-columns,
+  .analytics-grid.three-columns {
     grid-template-columns: 1fr;
   }
 

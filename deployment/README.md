@@ -42,6 +42,55 @@ website.
 public website after the visitor grants analytics consent. Rebuild the web image
 after changing this value.
 
+Backend Google Analytics reporting variables:
+
+```bash
+GA4_PROPERTY_ID=549075468
+GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/ga4-service-account.json
+GA4_API_TIMEOUT_MS=8000
+GA4_REALTIME_CACHE_SECONDS=30
+GA4_HISTORICAL_CACHE_SECONDS=900
+GA4_CREDENTIALS_HOST_PATH=/opt/projects/planetary-hours-platform/secrets/ga4-service-account.json
+```
+
+`GOOGLE_APPLICATION_CREDENTIALS` is the in-container path used by Google
+Application Default Credentials. The actual service-account JSON file must be
+installed manually on the VPS and mounted read-only. Never commit the credential
+file, copy it into a Docker image, or paste its JSON contents into an environment
+file.
+
+## Google Analytics Credential Mount
+
+Create the production secrets directory outside Git-tracked source files:
+
+```bash
+sudo mkdir -p /opt/projects/planetary-hours-platform/secrets
+sudo chown -R "$USER":"$USER" /opt/projects/planetary-hours-platform/secrets
+chmod 700 /opt/projects/planetary-hours-platform/secrets
+```
+
+Manually place the Google service-account JSON at:
+
+```bash
+/opt/projects/planetary-hours-platform/secrets/ga4-service-account.json
+```
+
+Then restrict permissions:
+
+```bash
+chmod 600 /opt/projects/planetary-hours-platform/secrets/ga4-service-account.json
+```
+
+The backend container mounts that file at:
+
+```bash
+/run/secrets/ga4-service-account.json
+```
+
+read-only. The Admin Panel talks only to the Planetary Hours backend for
+analytics reports; browser code must never receive Google credentials or call
+Google Analytics reporting APIs directly.
+
 ## Persistent Download Storage
 
 Create the production download storage directory before enabling admin APK

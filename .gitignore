@@ -2,3 +2,7 @@
 .env.production
 node_modules/
 dist/
+secrets/
+*.service-account.json
+*service-account*.json
+ga4-service-account.json

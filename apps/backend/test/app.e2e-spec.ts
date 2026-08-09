@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { PrismaService } from './../src/database/prisma.service';
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/common/configure-app';
+import { GoogleAnalyticsDataService } from './../src/analytics/google-analytics-data.service';
 
 type ContentRecord = {
   id: number;
@@ -34,6 +35,11 @@ type BlogArticleListResponse = {
   items: BlogArticleResponse[];
 };
 
+type GoogleAnalyticsMock = {
+  runRealtimeReport: jest.Mock;
+  runReport: jest.Mock;
+};
+
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
   let records: ContentRecord[];
@@ -41,6 +47,7 @@ describe('AppController (e2e)', () => {
   let blogArticles: BlogArticleRecord[];
   let blogCategories: BlogCategoryRecord[];
   let jwtService: JwtService;
+  let googleAnalytics: GoogleAnalyticsMock;
 
   beforeEach(async () => {
     process.env.ADMIN_USERNAME = 'admin@example.com';
@@ -52,6 +59,7 @@ describe('AppController (e2e)', () => {
     distribution = createDistributionRecord();
     blogCategories = createBlogCategories();
     blogArticles = createBlogArticles(blogCategories);
+    googleAnalytics = createGoogleAnalyticsMock();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -64,6 +72,8 @@ describe('AppController (e2e)', () => {
           () => blogCategories,
         ),
       )
+      .overrideProvider(GoogleAnalyticsDataService)
+      .useValue(googleAnalytics)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -410,6 +420,40 @@ describe('AppController (e2e)', () => {
       .expect(401);
   });
 
+  it('/api/v1/admin/analytics/realtime rejects missing tokens', () => {
+    return request(app.getHttpServer())
+      .get('/api/v1/admin/analytics/realtime')
+      .expect(401);
+  });
+
+  it('/api/v1/admin/analytics/overview validates supported ranges', async () => {
+    const token = await loginAndGetToken(app);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/analytics/overview?range=90d')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+  });
+
+  it('/api/v1/admin/analytics/overview returns mapped GA metrics with a valid token', async () => {
+    const token = await loginAndGetToken(app);
+
+    return request(app.getHttpServer())
+      .get('/api/v1/admin/analytics/overview?range=7d')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          range: '7d',
+          users: 10,
+          sessions: 5,
+          views: 20,
+          engagementRate: 0.6,
+          averageEngagementTimeSeconds: 20,
+        });
+      });
+  });
+
   it('/api/v1/planetary-hours/:dayOfWeek (PUT) updates descriptions with a valid token', async () => {
     const payload = Array.from({ length: 24 }, (_, index) => ({
       hourNumber: index + 1,
@@ -740,6 +784,37 @@ function createPrismaMock(
     $transaction: jest.fn((operations: Array<Promise<ContentRecord>>) =>
       Promise.all(operations),
     ),
+  };
+}
+
+function createGoogleAnalyticsMock(): GoogleAnalyticsMock {
+  return {
+    runRealtimeReport: jest
+      .fn()
+      .mockResolvedValueOnce(analyticsReport([analyticsRow([], ['2'])]))
+      .mockResolvedValueOnce(
+        analyticsReport([analyticsRow(['/schedule', 'Schedule'], ['2', '4'])]),
+      )
+      .mockResolvedValueOnce(
+        analyticsReport([analyticsRow(['app_download_click'], ['3'])]),
+      ),
+    runReport: jest
+      .fn()
+      .mockResolvedValueOnce(
+        analyticsReport([analyticsRow([], ['10', '5', '20', '0.6', '100'])]),
+      )
+      .mockResolvedValue(analyticsReport([])),
+  };
+}
+
+function analyticsReport(rows: Array<Record<string, unknown>>) {
+  return { rows };
+}
+
+function analyticsRow(dimensions: string[], metrics: string[]) {
+  return {
+    dimensionValues: dimensions.map((value) => ({ value })),
+    metricValues: metrics.map((value) => ({ value })),
   };
 }
 
