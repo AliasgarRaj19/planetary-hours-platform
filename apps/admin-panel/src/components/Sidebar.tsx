@@ -7,6 +7,7 @@ const contentNavigation = [
   { label: 'Blog', path: '/blog' },
   { label: 'Analytics', path: '/analytics' },
   { label: 'Notifications', path: '/notifications' },
+  { label: 'System Logs', path: '/system-logs' },
   { label: 'Settings', path: '/settings' },
 ]
 

@@ -21,6 +21,11 @@ enum BlogArticleStatus {
   unpublished
 }
 
+enum AuditLogResult {
+  success
+  failure
+}
+
 model PlanetaryHourContent {
   id          Int      @id @default(autoincrement())
   dayOfWeek   Int
@@ -102,4 +107,32 @@ model BlogArticleCategory {
 
   @@id([articleId, categoryId])
   @@index([categoryId])
+}
+
+model AuditLog {
+  id                  String         @id @default(cuid())
+  createdAt           DateTime       @default(now())
+  actorType            String         @default("admin")
+  actorId              String?
+  actorUsername        String?
+  actorDisplayName     String?
+  actorRole            String?
+  action               String
+  module               String
+  resourceType         String
+  resourceId           String?
+  resourceDisplayName  String?
+  description          String
+  result               AuditLogResult
+  metadata             Json?
+  ipAddress            String?
+  userAgent            String?
+  requestId            String?
+
+  @@index([createdAt])
+  @@index([module, action, createdAt])
+  @@index([actorId, createdAt])
+  @@index([actorUsername, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([result, createdAt])
 }

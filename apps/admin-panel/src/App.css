@@ -502,6 +502,17 @@
   outline: none;
 }
 
+.settings-panel button.secondary {
+  border: 1px solid #dbe3ee;
+  background: #ffffff;
+  color: #1d4ed8;
+}
+
+.settings-panel button.secondary:hover,
+.settings-panel button.secondary:focus-visible {
+  background: #eef4ff;
+}
+
 .settings-panel button:disabled {
   cursor: not-allowed;
   opacity: 0.56;
@@ -720,6 +731,32 @@
 
 .analytics-table tr:last-child td {
   border-bottom: 0;
+}
+
+.audit-filter-panel {
+  gap: 14px;
+}
+
+.audit-filter-actions,
+.audit-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.audit-pagination {
+  justify-content: flex-end;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.audit-pagination button {
+  border: 1px solid #dbe3ee;
+}
+
+.audit-table {
+  min-width: 1020px;
 }
 
 .settings-field textarea {

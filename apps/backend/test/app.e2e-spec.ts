@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { PrismaService } from './../src/database/prisma.service';
@@ -35,6 +38,16 @@ type BlogArticleListResponse = {
   items: BlogArticleResponse[];
 };
 
+type AuditLogResponse = {
+  items: AuditLogRecord[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 type GoogleAnalyticsMock = {
   runRealtimeReport: jest.Mock;
   runReport: jest.Mock;
@@ -46,19 +59,26 @@ describe('AppController (e2e)', () => {
   let distribution: AppDistributionRecord;
   let blogArticles: BlogArticleRecord[];
   let blogCategories: BlogCategoryRecord[];
+  let auditLogs: AuditLogRecord[];
   let jwtService: JwtService;
   let googleAnalytics: GoogleAnalyticsMock;
+  let downloadStoragePath: string;
 
   beforeEach(async () => {
+    downloadStoragePath = await mkdtemp(
+      join(tmpdir(), 'backend-e2e-downloads-'),
+    );
     process.env.ADMIN_USERNAME = 'admin@example.com';
     process.env.ADMIN_PASSWORD_HASH = bcrypt.hashSync('correct-password', 4);
     process.env.JWT_SECRET = 'test-secret';
     process.env.JWT_EXPIRES_IN = '1h';
+    process.env.DOWNLOAD_STORAGE_PATH = downloadStoragePath;
 
     records = createSeedRecords();
     distribution = createDistributionRecord();
     blogCategories = createBlogCategories();
     blogArticles = createBlogArticles(blogCategories);
+    auditLogs = [];
     googleAnalytics = createGoogleAnalyticsMock();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -70,6 +90,7 @@ describe('AppController (e2e)', () => {
           () => distribution,
           () => blogArticles,
           () => blogCategories,
+          () => auditLogs,
         ),
       )
       .overrideProvider(GoogleAnalyticsDataService)
@@ -410,6 +431,32 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('/api/v1/auth/login (POST) creates success and failure audit logs without passwords', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        username: 'admin@example.com',
+        password: 'correct-password',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        username: 'admin@example.com',
+        password: 'wrong-password',
+      })
+      .expect(401);
+
+    expect(auditLogs.map((log) => log.action)).toEqual([
+      'auth.login.success',
+      'auth.login.failure',
+    ]);
+    expect(JSON.stringify(auditLogs)).not.toContain('correct-password');
+    expect(JSON.stringify(auditLogs)).not.toContain('wrong-password');
+    expect(JSON.stringify(auditLogs)).not.toContain('Bearer');
+  });
+
   it('/api/v1/auth/login (POST) rejects invalid credentials', () => {
     return request(app.getHttpServer())
       .post('/api/v1/auth/login')
@@ -480,6 +527,159 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  it('creates audit logs for admin mutations and exposes them newest-first with filters', async () => {
+    const token = await loginAndGetToken(app);
+    auditLogs = [];
+    const futureDate = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles')
+      .set('Authorization', `Bearer ${token}`)
+      .send(createArticlePayload())
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/admin/blog/articles/2')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Updated Draft' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/admin/blog/articles/2')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'published', publishedAt: futureDate })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles/2/publish')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/articles/2/unpublish')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/blog/categories')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'New Category', slug: 'new-category' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/admin/blog/categories/2')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Updated Timing', slug: 'timing-updated' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/admin/app-distribution/android')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        activeMode: 'google_play',
+        storeUrl:
+          'https://play.google.com/store/apps/details?id=com.planetaryhours.app',
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/app-distribution/android/apk')
+      .set('Authorization', `Bearer ${token}`)
+      .field('versionName', '1.0.4')
+      .field('versionCode', '8')
+      .attach('apk', Buffer.from('fake apk'), {
+        filename: 'planetary-hours.apk',
+        contentType: 'application/vnd.android.package-archive',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/planetary-hours/3')
+      .set('Authorization', `Bearer ${token}`)
+      .send(createPayload())
+      .expect(200);
+
+    expect(auditLogs.map((log) => log.action)).toEqual([
+      'blog.article.create',
+      'blog.article.update',
+      'blog.article.schedule',
+      'blog.article.publish',
+      'blog.article.unpublish',
+      'blog.category.create',
+      'blog.category.update',
+      'app_distribution.settings_update',
+      'app_distribution.apk_upload',
+      'planetary_hours.day_content_update',
+    ]);
+    expect(JSON.stringify(auditLogs)).not.toContain(token);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/audit-logs?module=blog&page=1&pageSize=2')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as AuditLogResponse;
+
+        expect(body.items).toHaveLength(2);
+        expect(body.items[0].module).toBe('blog');
+        expect(body.pagination.total).toBe(7);
+      });
+  });
+
+  it('keeps successful business mutations successful when audit persistence fails', async () => {
+    const token = await loginAndGetToken(app);
+    const prisma = app.get(PrismaService);
+    (prisma.auditLog.create as unknown as jest.Mock).mockRejectedValueOnce(
+      new Error('audit failed'),
+    );
+
+    await request(app.getHttpServer())
+      .put('/api/v1/planetary-hours/2')
+      .set('Authorization', `Bearer ${token}`)
+      .send(createPayload())
+      .expect(200);
+  });
+
+  it('/api/v1/admin/audit-logs (GET) requires JWT and validates queries', async () => {
+    const token = await loginAndGetToken(app);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/audit-logs')
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/audit-logs?page=0')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+  });
+
+  it('does not expose mutation endpoints for audit logs', async () => {
+    const token = await loginAndGetToken(app);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/admin/audit-logs')
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/admin/audit-logs')
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .patch('/api/v1/admin/audit-logs')
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .delete('/api/v1/admin/audit-logs')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
+
   it('/api/v1/planetary-hours/:dayOfWeek (PUT) rejects duplicate hours', async () => {
     const payload = Array.from({ length: 24 }, (_, index) => ({
       hourNumber: index === 23 ? 1 : index + 1,
@@ -519,6 +719,7 @@ describe('AppController (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+    await rm(downloadStoragePath, { force: true, recursive: true });
   });
 });
 
@@ -580,6 +781,7 @@ function createPrismaMock(
   getDistribution: () => AppDistributionRecord,
   getBlogArticles: () => BlogArticleRecord[],
   getBlogCategories: () => BlogCategoryRecord[],
+  getAuditLogs: () => AuditLogRecord[],
 ) {
   return {
     planetaryHourContent: {
@@ -781,6 +983,38 @@ function createPrismaMock(
         return Promise.resolve({ count: 0 });
       }),
     },
+    auditLog: {
+      create: jest.fn((args: { data: AuditLogCreateInput }) => {
+        const record = {
+          id: `audit_${getAuditLogs().length + 1}`,
+          createdAt: new Date(),
+          actorType: args.data.actorType ?? 'admin',
+          actorId: args.data.actorId ?? null,
+          actorUsername: args.data.actorUsername ?? null,
+          actorDisplayName: args.data.actorDisplayName ?? null,
+          actorRole: args.data.actorRole ?? null,
+          action: args.data.action,
+          module: args.data.module,
+          resourceType: args.data.resourceType,
+          resourceId: args.data.resourceId ?? null,
+          resourceDisplayName: args.data.resourceDisplayName ?? null,
+          description: args.data.description,
+          result: args.data.result,
+          metadata: args.data.metadata ?? null,
+          ipAddress: args.data.ipAddress ?? null,
+          userAgent: args.data.userAgent ?? null,
+          requestId: args.data.requestId ?? null,
+        } satisfies AuditLogRecord;
+        getAuditLogs().push(record);
+        return Promise.resolve(record);
+      }),
+      findMany: jest.fn((args?: AuditLogFindManyArgs) =>
+        Promise.resolve(findAuditLogs(getAuditLogs(), args)),
+      ),
+      count: jest.fn((args?: AuditLogFindManyArgs) =>
+        Promise.resolve(findAuditLogs(getAuditLogs(), args).length),
+      ),
+    },
     $transaction: jest.fn((operations: Array<Promise<ContentRecord>>) =>
       Promise.all(operations),
     ),
@@ -956,6 +1190,45 @@ type BlogCreateArgs = {
 type BlogUpdateArgs = {
   where: { id: number };
   data: Partial<BlogCreateArgs['data']>;
+};
+
+type AuditLogRecord = {
+  id: string;
+  createdAt: Date;
+  actorType: string;
+  actorId: string | null;
+  actorUsername: string | null;
+  actorDisplayName: string | null;
+  actorRole: string | null;
+  action: string;
+  module: string;
+  resourceType: string;
+  resourceId: string | null;
+  resourceDisplayName: string | null;
+  description: string;
+  result: 'success' | 'failure';
+  metadata: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+  requestId: string | null;
+};
+
+type AuditLogCreateInput = Omit<AuditLogRecord, 'createdAt' | 'id'>;
+
+type AuditLogFindManyArgs = {
+  where?: {
+    AND?: Array<{
+      module?: string;
+      action?: string;
+      result?: 'success' | 'failure';
+      resourceType?: string;
+      resourceId?: string;
+      createdAt?: { gte?: Date; lte?: Date };
+      OR?: Array<Record<string, unknown>>;
+    }>;
+  };
+  skip?: number;
+  take?: number;
 };
 
 function createBlogCategories(): BlogCategoryRecord[] {
@@ -1140,4 +1413,57 @@ function toBlogArticleWithCategories(
       category: categories.find((category) => category.id === categoryId)!,
     })),
   };
+}
+
+function findAuditLogs(logs: AuditLogRecord[], args?: AuditLogFindManyArgs) {
+  let result = logs;
+
+  for (const condition of args?.where?.AND ?? []) {
+    if (condition.module) {
+      result = result.filter((log) => log.module === condition.module);
+    }
+
+    if (condition.action) {
+      result = result.filter((log) => log.action === condition.action);
+    }
+
+    if (condition.result) {
+      result = result.filter((log) => log.result === condition.result);
+    }
+
+    if (condition.resourceType) {
+      result = result.filter(
+        (log) => log.resourceType === condition.resourceType,
+      );
+    }
+
+    if (condition.resourceId) {
+      result = result.filter((log) => log.resourceId === condition.resourceId);
+    }
+
+    if (condition.createdAt?.gte) {
+      result = result.filter(
+        (log) => log.createdAt.getTime() >= condition.createdAt!.gte!.getTime(),
+      );
+    }
+
+    if (condition.createdAt?.lte) {
+      result = result.filter(
+        (log) => log.createdAt.getTime() <= condition.createdAt!.lte!.getTime(),
+      );
+    }
+  }
+
+  result = [...result].sort(
+    (first, second) => second.createdAt.getTime() - first.createdAt.getTime(),
+  );
+
+  if (typeof args?.skip === 'number' || typeof args?.take === 'number') {
+    result = result.slice(
+      args.skip ?? 0,
+      (args.skip ?? 0) + (args.take ?? result.length),
+    );
+  }
+
+  return result;
 }
