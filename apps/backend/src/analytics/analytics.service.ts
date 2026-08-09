@@ -36,10 +36,7 @@ export class AnalyticsService {
           metrics: [{ name: 'activeUsers' }],
         }),
         this.googleAnalytics.runRealtimeReport({
-          dimensions: [
-            { name: 'unifiedPagePathScreen' },
-            { name: 'unifiedScreenName' },
-          ],
+          dimensions: [{ name: 'unifiedScreenName' }],
           metrics: [{ name: 'activeUsers' }, { name: 'screenPageViews' }],
           limit: 10,
         }),
@@ -50,8 +47,8 @@ export class AnalyticsService {
         }),
       ]);
       const activePages = rows(pageReport).map((row) => ({
-        path: readDimension(row, 0) || '/',
-        title: readDimension(row, 1) || null,
+        path: '',
+        title: readDimension(row, 0) || null,
         activeUsers: readNumberMetric(row, 0),
       }));
       const events = rows(eventReport).map((row) => ({

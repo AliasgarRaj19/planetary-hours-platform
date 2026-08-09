@@ -33,8 +33,8 @@ describe('AnalyticsService', () => {
       .mockResolvedValueOnce(report([metricRow([], ['3'])]))
       .mockResolvedValueOnce(
         report([
-          metricRow(['/schedule', 'Schedule Table'], ['2', '5']),
-          metricRow(['/blog', 'Blog'], ['1', '3']),
+          metricRow(['Schedule Table'], ['2', '5']),
+          metricRow(['Blog'], ['1', '3']),
         ]),
       )
       .mockResolvedValueOnce(
@@ -49,14 +49,23 @@ describe('AnalyticsService', () => {
       recentViews: 8,
       recentEvents: 10,
       activePages: [
-        { path: '/schedule', title: 'Schedule Table', activeUsers: 2 },
-        { path: '/blog', title: 'Blog', activeUsers: 1 },
+        { path: '', title: 'Schedule Table', activeUsers: 2 },
+        { path: '', title: 'Blog', activeUsers: 1 },
       ],
       events: [
         { eventName: 'app_download_click', count: 4 },
         { eventName: 'blog_article_view', count: 6 },
       ],
     });
+    const realtimePageRequest =
+      googleAnalytics.runRealtimeReport.mock.calls[1][0];
+    expect(realtimePageRequest).toMatchObject({
+      dimensions: [{ name: 'unifiedScreenName' }],
+      metrics: [{ name: 'activeUsers' }, { name: 'screenPageViews' }],
+    });
+    expect(JSON.stringify(realtimePageRequest)).not.toContain(
+      'unifiedPagePathScreen',
+    );
   });
 
   it('maps overview report metrics', async () => {
@@ -89,6 +98,9 @@ describe('AnalyticsService', () => {
           users: 8,
         },
       ],
+    });
+    expect(googleAnalytics.runReport.mock.calls[0][0]).toMatchObject({
+      dimensions: [{ name: 'pagePath' }, { name: 'pageTitle' }],
     });
   });
 
