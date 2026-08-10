@@ -113,6 +113,61 @@ export class AuditService {
       },
     };
   }
+
+  async getFilterOptions() {
+    const [actors, modules, actions, resourceTypes] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        where: {
+          actorUsername: { not: null },
+        },
+        distinct: ['actorUsername'],
+        select: {
+          actorUsername: true,
+        },
+        orderBy: {
+          actorUsername: 'asc',
+        },
+      }),
+      this.prisma.auditLog.findMany({
+        distinct: ['module'],
+        select: {
+          module: true,
+        },
+        orderBy: {
+          module: 'asc',
+        },
+      }),
+      this.prisma.auditLog.findMany({
+        distinct: ['action'],
+        select: {
+          action: true,
+          module: true,
+        },
+        orderBy: [{ module: 'asc' }, { action: 'asc' }],
+      }),
+      this.prisma.auditLog.findMany({
+        distinct: ['resourceType'],
+        select: {
+          resourceType: true,
+        },
+        orderBy: {
+          resourceType: 'asc',
+        },
+      }),
+    ]);
+
+    return {
+      actors: actors
+        .map((item) => item.actorUsername)
+        .filter((actor): actor is string => Boolean(actor)),
+      modules: modules.map((item) => item.module),
+      actions: actions.map((item) => ({
+        value: item.action,
+        module: item.module,
+      })),
+      resourceTypes: resourceTypes.map((item) => item.resourceType),
+    };
+  }
 }
 
 function buildAuditLogWhere(

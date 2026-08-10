@@ -756,7 +756,56 @@
 }
 
 .audit-table {
-  min-width: 1020px;
+  min-width: 1240px;
+  table-layout: fixed;
+}
+
+.audit-col-date {
+  width: 150px;
+}
+
+.audit-col-actor {
+  width: 170px;
+}
+
+.audit-col-role {
+  width: 90px;
+}
+
+.audit-col-module {
+  width: 130px;
+}
+
+.audit-col-action {
+  width: 155px;
+}
+
+.audit-col-resource {
+  width: 150px;
+}
+
+.audit-col-description {
+  width: auto;
+}
+
+.audit-col-result {
+  width: 96px;
+}
+
+.audit-col-ip {
+  width: 130px;
+}
+
+.audit-result-badge {
+  white-space: nowrap;
+}
+
+.audit-description {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .settings-field textarea {

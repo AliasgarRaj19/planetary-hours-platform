@@ -49,6 +49,16 @@ export type AuditLogResponse = {
   }
 }
 
+export type AuditLogFilterOptions = {
+  actors: string[]
+  modules: string[]
+  actions: Array<{
+    value: string
+    module: string
+  }>
+  resourceTypes: string[]
+}
+
 export function getAuditLogs(query: AuditLogQuery = {}) {
   const params = new URLSearchParams()
 
@@ -60,6 +70,10 @@ export function getAuditLogs(query: AuditLogQuery = {}) {
 
   const suffix = params.toString() ? `?${params.toString()}` : ''
   return requestAuditLogs<AuditLogResponse>(`/api/v1/admin/audit-logs${suffix}`)
+}
+
+export function getAuditLogFilterOptions() {
+  return requestAuditLogs<AuditLogFilterOptions>('/api/v1/admin/audit-logs/filter-options')
 }
 
 async function requestAuditLogs<T>(path: string): Promise<T> {

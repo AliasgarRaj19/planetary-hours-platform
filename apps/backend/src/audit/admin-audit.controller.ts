@@ -8,6 +8,11 @@ import { AuditLogQueryDto } from './dto/audit-log-query.dto';
 export class AdminAuditController {
   constructor(private readonly auditService: AuditService) {}
 
+  @Get('filter-options')
+  getFilterOptions() {
+    return this.auditService.getFilterOptions();
+  }
+
   @Get()
   getAuditLogs(@Query() query: AuditLogQueryDto) {
     return this.auditService.query(query);

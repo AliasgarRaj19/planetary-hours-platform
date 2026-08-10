@@ -130,6 +130,39 @@ describe('AuditService', () => {
     });
   });
 
+  it('returns distinct sorted filter options without sensitive metadata', async () => {
+    prisma.auditLog.findMany
+      .mockResolvedValueOnce([
+        { actorUsername: 'admin@example.com' },
+        { actorUsername: 'editor@example.com' },
+      ])
+      .mockResolvedValueOnce([{ module: 'auth' }, { module: 'blog' }])
+      .mockResolvedValueOnce([
+        { action: 'auth.login.success', module: 'auth' },
+        { action: 'blog.article.update', module: 'blog' },
+      ])
+      .mockResolvedValueOnce([
+        { resourceType: 'admin_session' },
+        { resourceType: 'blog_article' },
+      ]);
+
+    await expect(service.getFilterOptions()).resolves.toEqual({
+      actors: ['admin@example.com', 'editor@example.com'],
+      modules: ['auth', 'blog'],
+      actions: [
+        { value: 'auth.login.success', module: 'auth' },
+        { value: 'blog.article.update', module: 'blog' },
+      ],
+      resourceTypes: ['admin_session', 'blog_article'],
+    });
+    expect(JSON.stringify(prisma.auditLog.findMany.mock.calls)).not.toContain(
+      'metadata',
+    );
+    expect(JSON.stringify(prisma.auditLog.findMany.mock.calls)).not.toContain(
+      'ipAddress',
+    );
+  });
+
   it('removes sensitive nested metadata keys', () => {
     expect(
       sanitizeMetadata({

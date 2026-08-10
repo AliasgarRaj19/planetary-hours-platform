@@ -2,12 +2,13 @@ import React, { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getAuditLogs } from '../api/audit-logs'
+import { getAuditLogFilterOptions, getAuditLogs } from '../api/audit-logs'
 import { Sidebar } from '../components/Sidebar'
 import { SystemLogsPage } from './SystemLogsPage'
 
 vi.mock('../api/audit-logs', () => ({
   getAuditLogs: vi.fn(),
+  getAuditLogFilterOptions: vi.fn(),
 }))
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -28,19 +29,22 @@ describe('SystemLogsPage', () => {
 
   it('renders audit logs in a read-only table', async () => {
     mockAuditLogs()
+    mockFilterOptions()
 
     renderPage(<SystemLogsPage />)
 
     expect(text()).toContain('Loading system logs...')
     await waitForText('Blog article "Example" was updated.')
     expect(text()).toContain('admin@example.com')
-    expect(text()).toContain('blog.article.update')
+    expect(text()).toContain('Update Article')
     expect(text()).toContain('Success')
+    expect(container!.querySelector('.audit-result-badge.success')).toBeTruthy()
     expect(text()).not.toContain('Delete')
     expect(text()).not.toContain('Edit')
   })
 
   it('renders loading, empty, and error states', async () => {
+    mockFilterOptions()
     vi.mocked(getAuditLogs).mockResolvedValueOnce({
       items: [],
       pagination: { page: 1, pageSize: 25, total: 0, totalPages: 0 },
@@ -58,21 +62,43 @@ describe('SystemLogsPage', () => {
     root = null
     container = null
 
+    mockFilterOptions()
     vi.mocked(getAuditLogs).mockRejectedValueOnce(new Error('Logs unavailable'))
     renderPage(<SystemLogsPage />)
     await waitForText('Logs unavailable')
   })
 
-  it('applies filters and changes pages', async () => {
+  it('renders dropdown filters, limits actions by module, applies filters, and changes pages', async () => {
     mockAuditLogs()
+    mockFilterOptions()
 
     renderPage(<SystemLogsPage />)
     await waitForText('Blog article "Example" was updated.')
 
-    const inputs = Array.from(container!.querySelectorAll('input'))
+    expect(text()).toContain('All users')
+    expect(text()).toContain('All modules')
+    expect(text()).toContain('All actions')
+    expect(text()).toContain('All resources')
+    expect(text()).toContain('Failure')
+
+    const selects = Array.from(container!.querySelectorAll('select'))
     await act(async () => {
-      setInputValue(inputs[2], 'admin@example.com')
-      setInputValue(inputs[4], 'blog')
+      selects[0].value = 'admin@example.com'
+      selects[0].dispatchEvent(new Event('change', { bubbles: true }))
+      selects[1].value = 'blog'
+      selects[1].dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    expect(text()).toContain('Update Article')
+    expect(text()).not.toContain('Successful Login')
+
+    await act(async () => {
+      selects[2].value = 'blog.article.update'
+      selects[2].dispatchEvent(new Event('change', { bubbles: true }))
+      selects[3].value = 'success'
+      selects[3].dispatchEvent(new Event('change', { bubbles: true }))
+      selects[4].value = 'blog_article'
+      selects[4].dispatchEvent(new Event('change', { bubbles: true }))
       container!.querySelector('form')!.dispatchEvent(
         new Event('submit', { bubbles: true, cancelable: true }),
       )
@@ -83,6 +109,9 @@ describe('SystemLogsPage', () => {
         expect.objectContaining({
           actor: 'admin@example.com',
           module: 'blog',
+          action: 'blog.article.update',
+          resourceType: 'blog_article',
+          result: 'success',
           page: 1,
         }),
       )
@@ -101,6 +130,40 @@ describe('SystemLogsPage', () => {
         expect.objectContaining({ page: 2 }),
       )
     })
+  })
+
+  it('resets filters and page state', async () => {
+    mockAuditLogs()
+    mockFilterOptions()
+
+    renderPage(<SystemLogsPage />)
+    await waitForText('Blog article "Example" was updated.')
+
+    const selects = Array.from(container!.querySelectorAll('select'))
+    await act(async () => {
+      selects[1].value = 'blog'
+      selects[1].dispatchEvent(new Event('change', { bubbles: true }))
+      selects[2].value = 'blog.article.update'
+      selects[2].dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const resetButton = Array.from(container!.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Reset Filters',
+    )
+    expect(resetButton).toBeTruthy()
+
+    await act(async () => {
+      resetButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    await waitFor(() => {
+      expect(getAuditLogs).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 25,
+      })
+    })
+    expect(selects[1].value).toBe('')
+    expect(selects[2].value).toBe('')
   })
 })
 
@@ -173,13 +236,19 @@ function mockAuditLogs() {
   })
 }
 
-function setInputValue(input: HTMLInputElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    'value',
-  )?.set
-  setter?.call(input, value)
-  input.dispatchEvent(new Event('input', { bubbles: true }))
+function mockFilterOptions() {
+  vi.mocked(getAuditLogFilterOptions).mockResolvedValue({
+    actors: ['admin@example.com', 'editor@example.com'],
+    modules: ['auth', 'blog', 'planetary_hours', 'app_distribution'],
+    actions: [
+      { value: 'auth.login.success', module: 'auth' },
+      { value: 'auth.login.failure', module: 'auth' },
+      { value: 'blog.article.update', module: 'blog' },
+      { value: 'planetary_hours.day_content_update', module: 'planetary_hours' },
+      { value: 'app_distribution.apk_upload', module: 'app_distribution' },
+    ],
+    resourceTypes: ['admin_session', 'blog_article', 'planetary_hour_day'],
+  })
 }
 
 async function waitForText(expectedText: string) {

@@ -653,6 +653,61 @@ describe('AppController (e2e)', () => {
       .expect(400);
   });
 
+  it('/api/v1/admin/audit-logs/filter-options requires JWT and returns deduplicated safe values', async () => {
+    const token = await loginAndGetToken(app);
+    auditLogs = [
+      createAuditLogRecord({
+        id: 'audit_1',
+        actorUsername: 'admin@example.com',
+        action: 'auth.login.success',
+        module: 'auth',
+        resourceType: 'admin_session',
+        metadata: { token: 'secret' },
+        ipAddress: '127.0.0.1',
+      }),
+      createAuditLogRecord({
+        id: 'audit_2',
+        actorUsername: 'admin@example.com',
+        action: 'auth.login.success',
+        module: 'auth',
+        resourceType: 'admin_session',
+        metadata: { password: 'secret' },
+        ipAddress: '127.0.0.2',
+      }),
+      createAuditLogRecord({
+        id: 'audit_3',
+        actorUsername: 'editor@example.com',
+        action: 'blog.article.update',
+        module: 'blog',
+        resourceType: 'blog_article',
+        metadata: { slug: 'example' },
+        ipAddress: '127.0.0.3',
+      }),
+    ];
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/audit-logs/filter-options')
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/audit-logs/filter-options')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toEqual({
+          actors: ['admin@example.com', 'editor@example.com'],
+          modules: ['auth', 'blog'],
+          actions: [
+            { value: 'auth.login.success', module: 'auth' },
+            { value: 'blog.article.update', module: 'blog' },
+          ],
+          resourceTypes: ['admin_session', 'blog_article'],
+        });
+        expect(JSON.stringify(response.body)).not.toContain('secret');
+        expect(JSON.stringify(response.body)).not.toContain('127.0.0');
+      });
+  });
+
   it('does not expose mutation endpoints for audit logs', async () => {
     const token = await loginAndGetToken(app);
 
@@ -1216,6 +1271,12 @@ type AuditLogRecord = {
 type AuditLogCreateInput = Omit<AuditLogRecord, 'createdAt' | 'id'>;
 
 type AuditLogFindManyArgs = {
+  distinct?: Array<'action' | 'actorUsername' | 'module' | 'resourceType'>;
+  select?: Partial<
+    Record<'action' | 'actorUsername' | 'module' | 'resourceType', boolean>
+  >;
+  orderBy?:
+    Record<string, 'asc' | 'desc'> | Array<Record<string, 'asc' | 'desc'>>;
   where?: {
     AND?: Array<{
       module?: string;
@@ -1230,6 +1291,31 @@ type AuditLogFindManyArgs = {
   skip?: number;
   take?: number;
 };
+
+function createAuditLogRecord(
+  input: Partial<AuditLogRecord> & Pick<AuditLogRecord, 'id'>,
+): AuditLogRecord {
+  return {
+    createdAt: new Date('2026-08-09T00:00:00.000Z'),
+    actorType: 'admin',
+    actorId: input.actorUsername ?? null,
+    actorUsername: null,
+    actorDisplayName: null,
+    actorRole: null,
+    action: 'auth.login.success',
+    module: 'auth',
+    resourceType: 'admin_session',
+    resourceId: null,
+    resourceDisplayName: null,
+    description: 'Audit event.',
+    result: 'success',
+    metadata: null,
+    ipAddress: null,
+    userAgent: null,
+    requestId: null,
+    ...input,
+  };
+}
 
 function createBlogCategories(): BlogCategoryRecord[] {
   return [
@@ -1458,6 +1544,38 @@ function findAuditLogs(logs: AuditLogRecord[], args?: AuditLogFindManyArgs) {
     (first, second) => second.createdAt.getTime() - first.createdAt.getTime(),
   );
 
+  if (args?.distinct?.length) {
+    const distinctKeys = args.distinct;
+    const seen = new Set<string>();
+    result = result.filter((log) => {
+      const key = distinctKeys.map((distinctKey) => log[distinctKey]).join('|');
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  if (args?.orderBy) {
+    const orderBy = Array.isArray(args.orderBy) ? args.orderBy : [args.orderBy];
+    result = [...result].sort((first, second) => {
+      for (const order of orderBy) {
+        const [key, direction] = Object.entries(order)[0] as [
+          keyof AuditLogRecord,
+          'asc' | 'desc',
+        ];
+        const firstValue = formatAuditSortValue(first[key]);
+        const secondValue = formatAuditSortValue(second[key]);
+        const comparison = firstValue.localeCompare(secondValue);
+        if (comparison !== 0) {
+          return direction === 'asc' ? comparison : -comparison;
+        }
+      }
+      return 0;
+    });
+  }
+
   if (typeof args?.skip === 'number' || typeof args?.take === 'number') {
     result = result.slice(
       args.skip ?? 0,
@@ -1465,5 +1583,31 @@ function findAuditLogs(logs: AuditLogRecord[], args?: AuditLogFindManyArgs) {
     );
   }
 
+  if (args?.select) {
+    return result.map((log) => {
+      const selected: Record<string, string | null> = {};
+      for (const key of Object.keys(args.select ?? {})) {
+        selected[key] = log[key as keyof AuditLogRecord] as string | null;
+      }
+      return selected;
+    });
+  }
+
   return result;
+}
+
+function formatAuditSortValue(value: AuditLogRecord[keyof AuditLogRecord]) {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return String(value);
+  }
+
+  return '';
 }
